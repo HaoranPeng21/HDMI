@@ -1,8 +1,8 @@
-# HGTfinder
+# HDMI ("HGT Detection from MAGs in Individuals") workflow
 
 ## Overview
 
-HGTfinder is a workflow to detect recent HGT events based on metagenome-assembled-genomes (MAGs). HGTfinder captured individual-specific, recent HGT (0-10000 years) with their bacterial host genomes. 
+HDMI workflow is a workflow to detect recent HGT events based on metagenome-assembled-genomes (MAGs). HGTfinder captured individual-specific, recent HGT (0-10000 years) with their bacterial host genomes. 
 
 If you have any questions about [HGTfinder](https://github.com/HaoranPeng21/HGTfinder), feel free to contact me (h.peng@umcg.nl)
 
@@ -59,7 +59,7 @@ python HGTdetect.py -i genome_folder -m Group_info_test.txt
 
 
 
-## Step 2: HGT profiling
+## Step 2: HGT profiling in individuals
 
 ```
 usage: HGTfinder.py [-h] -r1 READ1 -r2 READ2 [-i SAMPLE_ID] [-o OUTPUT]
@@ -104,7 +104,6 @@ optional arguments:
 ```
 python HGTfinder.py -r1 $read1 -r2 $read2 -i ${i} -o ./result -mag_dir genome_folder -table_dir output/New_HGT_table1.csv -threads 5
 ```
-
 
 
 
