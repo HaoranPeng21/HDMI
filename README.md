@@ -1,8 +1,8 @@
-# HDMI ("HGT Detection from MAGs in Individuals") workflow
+# HDMI ("HGT Detection from MAGs in Individuals")
 
 ## Overview
 
-HDMI workflow is a workflow to detect recent HGT events based on metagenome-assembled-genomes (MAGs). HGTfinder captured individual-specific, recent HGT (0-10000 years) with their bacterial host genomes. 
+HDMI workflow is developed to detect recent HGT events based on metagenome-assembled-genomes (MAGs). HGTfinder captured individual-specific, recent HGT (0-10000 years) with their bacterial host genomes. 
 
 If you have any questions about [HGTfinder](https://github.com/HaoranPeng21/HGTfinder), feel free to contact me (h.peng@umcg.nl)
 
