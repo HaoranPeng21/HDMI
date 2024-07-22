@@ -59,7 +59,7 @@ python HGTdetect.py -i genome_folder -m Group_info_test.txt
 
 
 
-## Step 2: HGT profiling in individuals
+## Step2: HGT profiling in individuals
 
 ```
 usage: HGTfinder.py [-h] -r1 READ1 -r2 READ2 [-i SAMPLE_ID] [-o OUTPUT]
@@ -107,7 +107,7 @@ python HGTfinder.py -r1 $read1 -r2 $read2 -i ${i} -o ./result -mag_dir genome_fo
 
 
 
-## Step3 simulate seq without HGT
+## Step3: simulate seq without HGT
 
 ```
 usage: connect_seq.py [-h] -i HGT_INFO -s CONTIG_SEQ [-o OUTPUT]
@@ -139,7 +139,7 @@ bowtie2-build output/simi_sequences.fasta output/simi_sequences_index --threads 
 
 
 
-## Step4 HGT presence/absence detection
+## Step4: HGT presence/absence detection
 
 ```
 usage: HGTprofile.py [-h] -r1 READ1 -r2 READ2 [-i SAMPLE_ID] [-o OUTPUT]
