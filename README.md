@@ -4,7 +4,7 @@
 
 HDMI workflow is developed to detect recent HGT events based on metagenome-assembled-genomes (MAGs). HGTfinder captured individual-specific, recent HGT (0-10000 years) with their bacterial host genomes. 
 
-If you have any questions about [HGTfinder](https://github.com/HaoranPeng21/HGTfinder), feel free to contact me (h.peng@umcg.nl)
+If you have any questions about [HDMI](https://github.com/HaoranPeng21/HGTfinder), feel free to contact me (h.peng@umcg.nl)
 
 ## Software requirement
 
