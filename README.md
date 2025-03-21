@@ -6,7 +6,7 @@ HDMI workflow is developed to detect recent HGT events based on metagenome-assem
 
 If you have any questions about [HDMI](https://github.com/HaoranPeng21/HGT-workflow), feel free to contact me (h.peng@umcg.nl)
 
-![Overview](https://github.com/HaoranPeng21/HGT-workflow/blob/main/Overview.pdf)
+![Overview](./images/Overview.png)
 
 
 ## Software requirement
