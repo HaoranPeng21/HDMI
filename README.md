@@ -1,176 +1,300 @@
-# HDMI ("HGT Detection from MAGs in Individuals")
+# HDMI (HGT Detection from MAGs in Individual) Pipeline
+
+A comprehensive pipeline for detecting and analyzing horizontal gene transfer (HGT) events in metagenomic data.
+
+Author: Haoran Peng (penghr21@gmail.com)
+GitHub: https://github.com/HaoranPeng21/HDMI
 
 ## Overview
 
-HDMI workflow is developed to detect recent HGT events based on metagenome-assembled-genomes (MAGs). HGTfinder captured individual-specific, recent HGT (0-10000 years) with their bacterial host genomes. 
+The HDMI pipeline consists of 7 main steps:
 
-If you have any questions about [HDMI](https://github.com/HaoranPeng21/HGT-workflow), feel free to contact me (h.peng@umcg.nl)
+1. **Index** - Build genome indices for faster processing
+2. **Detect** - Find HGT candidates using BLAST analysis
+3. **Validate** - Validate HGT events for individual samples
+4. **Merge** - Merge and filter results from multiple samples
+5. **Connect** - Extract HGT sequences and generate simulated sequences
+6. **Profile** - Analyze read coverage for simulated sequences
+7. **Summary** - Generate final element table with metagenomic evidence
 
-![Overview](./images/Overview.png)
+## Installation
 
+### Prerequisites
 
-## Software requirement
+- Python 3.7+
+- BLAST+
+- Bowtie2
+- Samtools
+- Conda (recommended)
 
-* [Samtool](https://www.htslib.org/)
-* [Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/manual.shtml)
-* [BLAST](https://doi.org/10.1186/1471-2105-10-421)
+### Installation Methods
+
+#### Method 1: Quick Install (Recommended)
+```bash
+# Clone the repository
+git clone https://github.com/HaoranPeng21/HDMI.git
+cd HDMI
+
+# Run the installation script
+./install.sh
+```
+
+#### Method 2: Manual Installation
+```bash
+# Clone the repository
+git clone https://github.com/HaoranPeng21/HDMI.git
+cd HDMI
+
+# Create conda environment
+conda env create -f environment.yml
+
+# Activate environment
+conda activate HDMI
+
+# Install HDMI
+pip install -e .
+```
+
+#### Method 3: Direct Use
+```bash
+# Clone the repository
+git clone https://github.com/HaoranPeng21/HDMI.git
+cd HDMI
+
+# Make HDMI script executable
+chmod +x bin/HDMI
+
+# Use directly
+./bin/HDMI --help
+```
 
 ## Quick Start
 
-### Prepare software
+### Complete Pipeline Example
 
-```
-conda create -n HGTfinder python=3.7 blast bowtie2 samtools
-```
+```bash
+# Step 1: Build genome indices
+HDMI index -g genome_folder -m Group_info_test.txt -o output
 
+# Step 2: Detect HGT candidates (batch processing)
+HDMI detect -i genome_folder -o output -m Group_info_test.txt -number 1 -total 2
+HDMI detect -i genome_folder -o output -m Group_info_test.txt -number 2 -total 2
 
+# Step 3: Validate samples
+HDMI validate -r1 data/sample1_R1.fq.gz -r2 data/sample1_R2.fq.gz --prefix sample1 -o output -g genome_folder -m Group_info_test.txt --threads 5
+HDMI validate -r1 data/sample2_R1.fq.gz -r2 data/sample2_R2.fq.gz --prefix sample2 -o output -g genome_folder -m Group_info_test.txt --threads 5
 
-## Step1: Detect HGT from MAGs
+# Step 4: Merge and filter results
+HDMI merge -o output -group Group_info_test.txt
 
-```
-usage: HGTdetect.py [-h] -i PATH [-o OUTPUT] -m TABLE [-number TASK_NUMBER]
-                    [-total TOTAL_TASKS]
+# Step 5: Connect sequences
+HDMI connect -o output
 
-HGT detection pipeline step1
+# Step 6: Profile analysis
+HDMI profile -r1 data/sample1_R1.fq.gz -r2 data/sample1_R2.fq.gz --prefix sample1 -o output --threads 5
+HDMI profile -r1 data/sample2_R1.fq.gz -r2 data/sample2_R2.fq.gz --prefix sample2 -o output --threads 5
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -i PATH, --path PATH  Path to genomes FASTA.
-  -o OUTPUT, --output OUTPUT
-                        the output folder
-  -m TABLE, --table TABLE
-                        genomes groups information
-  -number TASK_NUMBER, --task_number TASK_NUMBER
-                        Task number (1-indexed)
-  -total TOTAL_TASKS, --total_tasks TOTAL_TASKS
-                        Total number of tasks
-```
-
-#### Input
-
-
-
-#### Output
-
-
-
-#### Example:
-
-```
-python HGTdetect.py -i genome_folder -m Group_info_test.txt
+# Step 7: Generate final summary
+HDMI summary -o output/element_table.csv
 ```
 
+## Command Reference
 
+### HDMI index
 
+Build genome indices for faster processing.
+
+```bash
+HDMI index -g <genome_folder> -m <group_info> -o <output>
+```
+
+**Parameters:**
+- `-g, --genome_path`: Path to genome folder
+- `-m, --group_info`: Group information file
+- `-o, --output`: Output directory (auto-creates index subfolder)
+
+### HDMI detect
+
+Find HGT candidates using BLAST analysis.
+
+```bash
+HDMI detect -i <genome_folder> -o <output> -m <group_info> [-number <batch_num> -total <total_batches>]
+```
+
+**Parameters:**
+- `-i, --genome_path`: Path to genome folder
+- `-o, --output`: Output directory (auto-creates intermediate/01_detection)
+- `-m, --group_info`: Group information file
+- `-number, --task_number`: Batch number (for batch processing)
+- `-total, --total_tasks`: Total number of batches
+- `--count-only`: Show genome pair count and performance estimates only
+
+### HDMI validate
+
+<<<<<<< HEAD
 ## Step2: HGT profiling in individuals
+=======
+Validate HGT events for a single sample.
+>>>>>>> six-step-pipeline
 
-```
-usage: HGTfinder.py [-h] -r1 READ1 -r2 READ2 [-i SAMPLE_ID] [-o OUTPUT]
-                    [-mag_dir GENOME_PATH] [-table_dir HGT_TABLE_PATH]
-                    [-threads THREADS] [-sth STH]
-
-HGT detection pipeline.
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -r1 READ1, --read1 READ1
-                        Path to read1 FASTA.
-  -r2 READ2, --read2 READ2
-                        Path to read2 FASTA.
-  -i SAMPLE_ID, --sample_id SAMPLE_ID
-                        Sample ID.
-  -o OUTPUT, --output OUTPUT
-                        Working directory.
-  -mag_dir GENOME_PATH, --genome_path GENOME_PATH
-                        Directory containing genomes.
-  -table_dir HGT_TABLE_PATH, --HGT_table_path HGT_TABLE_PATH
-                        Path to the HGT table.
-  -threads THREADS, --threads THREADS
-                        Number of threads.
-  -sth STH, --sth STH   reads span sites number
+```bash
+HDMI validate -r1 <read1> -r2 <read2> [--prefix <sample_prefix>] -o <output> -g <genome_folder> -m <group_info> [--threads <threads>]
 ```
 
+**Parameters:**
+- `-r1, --read1`: Read 1 file (supports .fq.gz, .fastq.gz, .fq, .fastq)
+- `-r2, --read2`: Read 2 file
+- `--prefix`: Sample prefix (auto-extracted from filename if not provided)
+- `-o, --output`: Output directory (auto-creates intermediate/02_validation/sample_name)
+- `-g, --genome_path`: Path to genome folder
+- `-m, --group_info`: Group information file
+- `--threads`: Number of threads (default: auto-detected)
 
+### HDMI merge
 
-#### Input
+Merge and filter results from multiple samples.
 
-
-
-#### Output
-
-
-
-
-
-#### Example
-
+```bash
+HDMI merge -o <output> -group <group_info> [--threshold <threshold>]
 ```
-python HGTfinder.py -r1 $read1 -r2 $read2 -i ${i} -o ./result -mag_dir genome_folder -table_dir output/New_HGT_table1.csv -threads 5
-```
 
+**Parameters:**
+- `-o, --output`: Output directory (auto-creates intermediate/03_final)
+- `-group, --group_info`: Group information file
+- `--threshold`: Abundance threshold (default: 1.0)
 
+### HDMI connect
 
+<<<<<<< HEAD
 ## Step3: simulate seq without HGT
+=======
+Extract HGT sequences and generate simulated sequences.
+>>>>>>> six-step-pipeline
 
-```
-usage: connect_seq.py [-h] -i HGT_INFO -s CONTIG_SEQ [-o OUTPUT]
-
-simulate sequence without HGT
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -i HGT_INFO, --hgt_info HGT_INFO
-                        HGT events information table.
-  -s CONTIG_SEQ, --contig_seq CONTIG_SEQ
-                        contig sequence from last step. eg.
-                        sequences_contig_all_FU.fa
-  -o OUTPUT, --output OUTPUT
-                        output path
+```bash
+HDMI connect -o <output>
 ```
 
+**Parameters:**
+- `-o, --output`: Output directory (auto-creates intermediate/04_connect)
 
+### HDMI profile
 
-#### Example
+Analyze read coverage for simulated sequences.
 
+```bash
+HDMI profile -r1 <read1> -r2 <read2> [--prefix <sample_prefix>] -o <output> [--threads <threads>]
 ```
-cat output/sequences_contig_q1.fa output/sequences_contig_s1.fa | awk '/^>/ {f=!seen[$1]++} f' > output/sequences_contig_all.fa
 
-python connect_seq.py -i output/HGT_events.csv -s output/sequences_contig_all.fa -o output/
+**Parameters:**
+- `-r1, --read1`: Read 1 file
+- `-r2, --read2`: Read 2 file
+- `--prefix`: Sample prefix (auto-extracted from filename if not provided)
+- `-o, --output`: Output directory (auto-creates intermediate/05_profile/sample_name)
+- `--threads`: Number of threads (default: auto-detected)
 
-bowtie2-build output/simi_sequences.fasta output/simi_sequences_index --threads 5
-```
+### HDMI summary
 
-
-
+<<<<<<< HEAD
 ## Step4: HGT presence/absence detection
+=======
+Generate final element table with metagenomic evidence.
+>>>>>>> six-step-pipeline
 
-```
-usage: HGTprofile.py [-h] -r1 READ1 -r2 READ2 [-i SAMPLE_ID] [-o OUTPUT]
-                     [-table_dir HGT_TABLE_PATH] [-threads THREADS]
-
-HGT detection pipeline.
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -r1 READ1, --read1 READ1
-                        Path to read1 FASTA.
-  -r2 READ2, --read2 READ2
-                        Path to read2 FASTA.
-  -i SAMPLE_ID, --sample_id SAMPLE_ID
-                        Sample ID.
-  -o OUTPUT, --output OUTPUT
-                        Working directory.
-  -table_dir HGT_TABLE_PATH, --HGT_table_path HGT_TABLE_PATH
-                        Path to the HGT table.
-  -threads THREADS, --threads THREADS
-                        Number of threads.
+```bash
+HDMI summary -o <output_file>
 ```
 
+**Parameters:**
+- `-o, --output`: Output file path (e.g., output/element_table.csv)
 
-
-#### Example
+## Output Structure
 
 ```
-python HGTprofile.py -r1 $read1 -r2 $read2 -i ${i} -o output/ -table_dir output/new_elements_info.csv -threads 1
+output/
+├── HGT_events.csv              # Final filtered HGT events
+├── HGT_events_raw.csv          # Raw HGT events from detection
+├── element_table.csv           # Final element table with metagenomic evidence
+├── sequences_contig_combined.fa # Combined contig sequences
+├── sequences_contig_q.fa       # Query contig sequences
+├── sequences_contig_s.fa       # Subject contig sequences
+├── sequences_matched_seq_q.fa  # Matched query sequences
+├── sequences_matched_seq_s.fa  # Matched subject sequences
+├── index/                      # Genome indices
+├── intermediate/               # Intermediate files
+│   ├── 01_detection/           # Batch processing files
+│   ├── 02_validation/          # Sample validation results
+│   ├── 03_final/               # Merge and filter results
+│   ├── 04_connect/             # Sequence connection results
+│   └── 05_profile/             # Profile analysis results
+└── log/                       # Log files
 ```
+
+## File Formats
+
+### Group Information File
+
+Tab-separated file with columns:
+- Genome name
+- Group number
+- Representative flag (1 for representative, 0 for non-representative)
+
+Example:
+```
+bin.1	1	1
+bin.2	2	1
+bin3	3	1
+bin4	4	1
+```
+
+### HGT Events File
+
+CSV file with columns:
+- HGT_ID: Unique identifier
+- Query_contig: Query contig name
+- Subject_contig: Subject contig name
+- Query_genome: Query genome name
+- Subject_genome: Subject genome name
+- Query_group: Query genome group
+- Subject_group: Subject genome group
+- Identity: BLAST identity
+- Coverage: BLAST coverage
+- E_value: BLAST E-value
+
+## Troubleshooting
+
+### Common Issues
+
+1. **BLAST not found**: Ensure BLAST+ is installed and in PATH
+2. **Bowtie2 not found**: Ensure Bowtie2 is installed and in PATH
+3. **Memory issues**: Use batch processing for large datasets
+4. **File not found errors**: Check file paths and permissions
+
+### Performance Tips
+
+1. Use batch processing for large genome sets
+2. Pre-build indices for faster validation
+3. Use appropriate thread counts for your system
+4. Monitor disk space for intermediate files
+
+## Version
+
+**v1.0**: Initial release with complete HGT detection pipeline
+
+## Citation
+
+If you use HDMI in your research, please cite:
+```
+HDMI: HGT Detection from MAGs in Individual
+Haoran Peng, 2024
+```
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Contact
+
+- GitHub: [https://github.com/HaoranPeng21/HDMI](https://github.com/HaoranPeng21/HDMI)
+- Issues: [https://github.com/HaoranPeng21/HDMI/issues](https://github.com/HaoranPeng21/HDMI/issues)
 
