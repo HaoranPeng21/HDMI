@@ -34,8 +34,14 @@ def calculate_custom_value(x):
         
     return result
 
-def process_profile_results(profile_dir, species_median_file, output_file):
+def process_profile_results(profile_dir, species_median_file, output_dir):
     """Process profile results and generate ME strict analysis"""
+    
+    # If output_dir is a directory, create the output file path
+    if os.path.isdir(output_dir):
+        output_file = os.path.join(output_dir, 'ME_connect_Process_stricter.csv')
+    else:
+        output_file = output_dir
     
     # Read species median abundance data
     species_median = pd.read_csv(species_median_file)
