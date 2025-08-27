@@ -714,9 +714,7 @@ def cmd_summary(args):
     
     # Auto-find profile directory if not provided
     if not hasattr(args, 'profile_dir') or not args.profile_dir:
-        # Extract output directory from output file path
-        output_dir = os.path.dirname(args.output)
-        profile_dir = os.path.join(output_dir, 'intermediate', '05_profile')
+        profile_dir = os.path.join(args.output, 'intermediate', '05_profile')
         if os.path.exists(profile_dir):
             args.profile_dir = profile_dir
             print(f"Auto-found profile directory: {args.profile_dir}")
@@ -726,9 +724,7 @@ def cmd_summary(args):
     
     # Auto-find species median file if not provided
     if not hasattr(args, 'species_median') or not args.species_median:
-        # Extract output directory from output file path
-        output_dir = os.path.dirname(args.output)
-        species_median = find_file_in_output(output_dir, 'species_median.csv')
+        species_median = find_file_in_output(args.output, 'species_median.csv')
         if species_median:
             args.species_median = species_median
             print(f"Auto-found species median file: {args.species_median}")
@@ -877,7 +873,7 @@ Examples:
     summary_parser.add_argument('-s', '--species_median',
                                 help='Species median abundance file (auto-found in output directory if not provided)')
     summary_parser.add_argument('-o', '--output', required=True,
-                                help='Output file path')
+                                help='Output directory (default: ./)')
     
     # Parse arguments
     args = parser.parse_args()
