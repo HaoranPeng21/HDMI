@@ -348,14 +348,10 @@ def main():
     os.makedirs(f"{args.output}/intermediate", exist_ok=True)
     
     # Building the combined genome index for selected representatives only (shared across samples)
-    # Try to find index in output/index first, then fall back to intermediate/index
-    output_index_dir = os.path.join(os.path.dirname(args.genome_path), 'output', 'index')
-    intermediate_index_dir = os.path.join(os.path.dirname(args.genome_path), 'intermediate', 'index')
-    
-    if os.path.exists(output_index_dir):
-        index_dir = output_index_dir
-    else:
-        index_dir = intermediate_index_dir
+    # Use the main output directory for index files (not the sample-specific output)
+    main_output_dir = args.output.split('intermediate')[0].rstrip('/')
+    index_dir = os.path.join(main_output_dir, 'index')
+    os.makedirs(index_dir, exist_ok=True)
     
     combined_genome = os.path.join(index_dir, 'combined_genome_representatives.fa')
     combined_genome_index = os.path.join(index_dir, 'combined_genome_representatives_index')
