@@ -80,6 +80,44 @@ def auto_create_dirs(base_output, *subdirs):
     return full_path
 
 
+def cleanup_bam_files(output_dir):
+    """Clean up BAM and BAI files to save disk space."""
+    print("\n=== Cleaning up BAM files ===")
+    
+    # Find all BAM and BAI files in the output directory
+    bam_files = []
+    bai_files = []
+    
+    for root, dirs, files in os.walk(output_dir):
+        for file in files:
+            if file.endswith('.bam'):
+                bam_files.append(os.path.join(root, file))
+            elif file.endswith('.bai'):
+                bai_files.append(os.path.join(root, file))
+    
+    # Remove BAM files
+    for bam_file in bam_files:
+        try:
+            os.remove(bam_file)
+            print(f"Removed: {bam_file}")
+        except OSError as e:
+            print(f"Warning: Could not remove {bam_file}: {e}")
+    
+    # Remove BAI files
+    for bai_file in bai_files:
+        try:
+            os.remove(bai_file)
+            print(f"Removed: {bai_file}")
+        except OSError as e:
+            print(f"Warning: Could not remove {bai_file}: {e}")
+    
+    total_removed = len(bam_files) + len(bai_files)
+    if total_removed > 0:
+        print(f"Cleaned up {total_removed} BAM/BAI files")
+    else:
+        print("No BAM/BAI files found to clean up")
+
+
 def run_command(cmd, description="Running command"):
     """Execute a command and handle errors."""
     print(f"\n=== {description} ===")
@@ -292,6 +330,9 @@ def cmd_validate(args):
             print(f"  - {dirname}/")
     else:
         print(f"\nWarning: Some expected outputs may be missing")
+    
+    # Clean up BAM files to save disk space
+    cleanup_bam_files(sample_output)
 
 
 def cmd_merge(args):
@@ -622,6 +663,9 @@ def cmd_profile(args):
         print(f"ERROR: Profile analysis failed with return code {e.returncode}")
         print(f"STDERR: {e.stderr}")
         raise
+    
+    # Clean up BAM files to save disk space
+    cleanup_bam_files(profile_output)
 
 def cmd_summary(args):
     """Summary Analysis: Calculate metagenomic evidence from profile results"""
