@@ -54,7 +54,7 @@ setup(
         "": ["*.py"],
     },
     scripts=[
-        "bin/HDMI",
+        "bin/HDMI.py",
     ],
     keywords="bioinformatics, metagenomics, horizontal gene transfer, HGT, MAGs",
     project_urls={
