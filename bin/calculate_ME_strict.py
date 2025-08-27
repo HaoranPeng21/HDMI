@@ -24,13 +24,13 @@ def calculate_custom_value(x):
         min_val = min(parts[:2])
         conne = parts[2]
         
-        # 降低阈值：只要有2条reads就认为有证据
+        # Lower threshold: consider evidence if there are at least 2 reads
         if (min_val + conne) >= 2:
-            result = 1.0  # 直接返回1表示存在
+            result = 1.0  # Return 1 to indicate existence
         else:
-            result = 0.0  # 返回0表示不存在
+            result = 0.0  # Return 0 to indicate non-existence
     else:
-        result = 0.0  # 返回0表示不存在
+        result = 0.0  # Return 0 to indicate non-existence
         
     return result
 
@@ -66,7 +66,7 @@ def process_profile_results(profile_dir, species_median_file, output_dir):
         
         try:
             df = pd.read_csv(file, sep='\t', header=None, dtype=str)
-            df.columns = ['HGT_ID'] + [f'{sample_name}']  # 只使用sample_name，不重复
+            df.columns = ['HGT_ID'] + [f'{sample_name}']  # Use only sample_name, no duplication
             df[f'{sample_name}'] = df[f'{sample_name}'].apply(calculate_custom_value)
             
             if merged_df.empty:
