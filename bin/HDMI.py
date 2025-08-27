@@ -163,10 +163,18 @@ def cmd_detect(args):
     
     script_path = os.path.join(get_script_dir(), 'HGTdetect.py')
     
+    # For batch processing, create intermediate/01_detection directory
+    if args.task_number and args.total_tasks:
+        batch_output = auto_create_dirs(args.output, 'intermediate', '01_detection')
+        output_dir = batch_output
+    else:
+        # For single run, create intermediate/01_detection directory
+        output_dir = auto_create_dirs(args.output, 'intermediate', '01_detection')
+    
     cmd = [
         'python', script_path,
         '-i', args.genome_path,
-        '-o', args.output,
+        '-o', output_dir,
         '-m', args.group_info
     ]
     
@@ -179,11 +187,11 @@ def cmd_detect(args):
     
     # Check for HGTdetect.py output and rename if needed
     if args.task_number:
-        new_hgt_table = os.path.join(args.output, f'New_HGT_table{args.task_number}.csv')
-        hgt_events_file = os.path.join(args.output, f'HGT_events_raw_batch_{args.task_number}.csv')
+        new_hgt_table = os.path.join(output_dir, f'New_HGT_table{args.task_number}.csv')
+        hgt_events_file = os.path.join(output_dir, f'HGT_events_raw_batch_{args.task_number}.csv')
     else:
-        new_hgt_table = os.path.join(args.output, 'New_HGT_table1.csv')
-        hgt_events_file = os.path.join(args.output, 'HGT_events_raw.csv')
+        new_hgt_table = os.path.join(output_dir, 'New_HGT_table1.csv')
+        hgt_events_file = os.path.join(output_dir, 'HGT_events_raw.csv')
     
     if os.path.exists(new_hgt_table):
         # Rename New_HGT_table{batch_num}.csv to HGT_events_raw_batch_{batch_num}.csv
@@ -192,6 +200,39 @@ def cmd_detect(args):
         print(f"\nSuccess! HGT candidates detected and renamed: {hgt_events_file}")
     elif os.path.exists(hgt_events_file):
         print(f"\nSuccess! HGT candidates detected: {hgt_events_file}")
+        
+        # Copy important files to output root directory
+        if not args.task_number:  # Only for single run
+            import shutil
+            files_to_copy = [
+                ('HGT_events_raw.csv', 'HGT_events_raw.csv'),
+                ('sequences_contig_q1.fa', 'sequences_contig_q1.fa'),
+                ('sequences_contig_s1.fa', 'sequences_contig_s1.fa'),
+                ('sequences_matched_seq_q1.fa', 'sequences_matched_seq_q1.fa'),
+                ('sequences_matched_seq_s1.fa', 'sequences_matched_seq_s1.fa')
+            ]
+            
+            for src, dst in files_to_copy:
+                src_path = os.path.join(output_dir, src)
+                dst_path = os.path.join(args.output, dst)
+                if os.path.exists(src_path):
+                    shutil.copy2(src_path, dst_path)
+                    print(f"  ✓ Copied {src} to output root")
+            
+            # Create combined contig file
+            combined_contig_file = os.path.join(args.output, 'sequences_contig_combined.fa')
+            with open(combined_contig_file, 'w') as combined:
+                # Add sequences from q file
+                q_file = os.path.join(output_dir, 'sequences_contig_q1.fa')
+                if os.path.exists(q_file):
+                    with open(q_file, 'r') as q:
+                        combined.write(q.read())
+                # Add sequences from s file
+                s_file = os.path.join(output_dir, 'sequences_contig_s1.fa')
+                if os.path.exists(s_file):
+                    with open(s_file, 'r') as s:
+                        combined.write(s.read())
+            print(f"  ✓ Created combined contig file: sequences_contig_combined.fa")
     else:
         print(f"\nWarning: Expected output file not found: {hgt_events_file}")
     
