@@ -45,13 +45,13 @@ cd HDMI
 git clone https://github.com/HaoranPeng21/HDMI.git
 cd HDMI
 
-# Create conda environment
+# Create conda environment (without HDMI package)
 conda env create -f environment.yml
 
 # Activate environment
 conda activate HDMI
 
-# Install HDMI
+# Install HDMI in development mode
 pip install -e .
 ```
 
