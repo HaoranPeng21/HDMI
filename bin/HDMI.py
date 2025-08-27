@@ -235,6 +235,7 @@ def cmd_detect(args):
             print(f"  ✓ Created combined contig file: sequences_contig_combined.fa")
     else:
         print(f"\nWarning: Expected output file not found: {hgt_events_file}")
+        return
     
     # Auto-merge batch results if this is a batch run
     if args.task_number and args.total_tasks:
