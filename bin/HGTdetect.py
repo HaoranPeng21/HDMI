@@ -199,8 +199,8 @@ def main():
         final_matched_sequences_q.update(output_match_fasta_q)
         final_output_fasta_s.update(output_fasta_s)
         final_matched_sequences_s.update(output_match_fasta_s)
-    # write result
-    output_filename = f"{args.output}/New_HGT_table{task_number}.csv"
+    # write result - always use batch format
+    output_filename = f"{args.output}/HGT_events_raw_batch_{task_number}.csv"
     output_fasta_q_filename = f"{args.output}/sequences_contig_q{task_number}.fa"
     output_matched_q_filename = f"{args.output}/sequences_matched_seq_q{task_number}.fa"
     output_fasta_s_filename = f"{args.output}/sequences_contig_s{task_number}.fa"
