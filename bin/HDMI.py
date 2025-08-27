@@ -185,11 +185,6 @@ def cmd_detect(args):
     
     run_command(cmd, "HDMI Detect: Finding HGT candidates")
     
-    print(f"\n=== DEBUG INFO ===")
-    print(f"DEBUG: task_number={task_number}, total_tasks={total_tasks}")
-    print(f"DEBUG: Final command was: {' '.join(cmd)}")
-    print(f"=== DEBUG END ===\n")
-    
     # Check for HGTdetect.py output
     hgt_events_file = os.path.join(output_dir, f'HGT_events_raw_batch_{task_number}.csv')
     
@@ -205,9 +200,7 @@ def cmd_detect(args):
     else:
         final_output = args.output
     
-    print(f"DEBUG: output_dir={output_dir}")
-    print(f"DEBUG: final_output={final_output}")
-    print(f"DEBUG: args.output={args.output}")
+
     
     if total_tasks > 1:
         # Multi-task mode: merge batch results
@@ -536,7 +529,7 @@ def cmd_index(args):
         # Build index
         cmd_rep = ['bowtie2-build', combined_genome_rep, combined_genome_rep_index]
         run_command(cmd_rep, "Building representative genome index")
-    # os.remove(combined_genome_rep)  # 暂时保留用于检查
+            # os.remove(combined_genome_rep)  # Keep temporarily for inspection
     
     # Build all genome index
     print("\n--- Building All Genome Index ---")
@@ -564,7 +557,7 @@ def cmd_index(args):
         # Build index
         cmd_all = ['bowtie2-build', combined_genome_all, combined_genome_all_index]
         run_command(cmd_all, "Building all genome index")
-    # os.remove(combined_genome_all)  # 暂时保留用于检查
+            # os.remove(combined_genome_all)  # Keep temporarily for inspection
     
     print("\n=== INDEX BUILDING COMPLETE ===")
     print(f"Representative genome index: {combined_genome_rep_index}.*")
