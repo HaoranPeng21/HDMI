@@ -46,7 +46,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "HDMI=HDMI:main",
+            "HDMI=bin.HDMI:main",
         ],
     },
     include_package_data=True,
