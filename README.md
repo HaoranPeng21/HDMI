@@ -131,11 +131,7 @@ HDMI detect -i <genome_folder> -o <output> -m <group_info> [-number <batch_num> 
 
 ### HDMI validate
 
-<<<<<<< HEAD
-## Step2: HGT profiling in individuals
-=======
 Validate HGT events for a single sample.
->>>>>>> six-step-pipeline
 
 ```bash
 HDMI validate -r1 <read1> -r2 <read2> [--prefix <sample_prefix>] -o <output> -g <genome_folder> -m <group_info> [--threads <threads>]
@@ -165,11 +161,7 @@ HDMI merge -o <output> -group <group_info> [--threshold <threshold>]
 
 ### HDMI connect
 
-<<<<<<< HEAD
-## Step3: simulate seq without HGT
-=======
 Extract HGT sequences and generate simulated sequences.
->>>>>>> six-step-pipeline
 
 ```bash
 HDMI connect -o <output>
@@ -195,11 +187,7 @@ HDMI profile -r1 <read1> -r2 <read2> [--prefix <sample_prefix>] -o <output> [--t
 
 ### HDMI summary
 
-<<<<<<< HEAD
-## Step4: HGT presence/absence detection
-=======
 Generate final element table with metagenomic evidence.
->>>>>>> six-step-pipeline
 
 ```bash
 HDMI summary -o <output_file>
