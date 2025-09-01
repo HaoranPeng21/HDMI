@@ -21,12 +21,12 @@ conda activate HDMI
 pip install -e .
 
 # 2. Run complete pipeline
-HDMI index -g genome_folder -m Group_info_test.txt -o output
-HDMI detect -i genome_folder -o output -m Group_info_test.txt
-HDMI validate -r1 data/sample1_R1.fq.gz -r2 data/sample1_R2.fq.gz -o output -g genome_folder -m Group_info_test.txt
+HDMI index -g genome_folder -m Group_info_test.txt -o output -t 10
+HDMI detect -i genome_folder -o output -m Group_info_test.txt -t 10
+HDMI validate -r1 data/sample1_R1.fq.gz -r2 data/sample1_R2.fq.gz -o output -g genome_folder -m Group_info_test.txt -t 10
 HDMI merge -o output -group Group_info_test.txt
 HDMI connect -o output
-HDMI profile -r1 data/sample1_R1.fq.gz -r2 data/sample1_R2.fq.gz -o output
+HDMI profile -r1 data/sample1_R1.fq.gz -r2 data/sample1_R2.fq.gz -o output -t 10
 HDMI summary -o output
 ```
 
@@ -66,14 +66,28 @@ HDMI is a comprehensive pipeline designed to detect horizontal gene transfer (HG
 - ✅ **Comprehensive Output**: Detailed results with multiple validation levels
 - ✅ **Clean File Names**: Final output files without confusing numbers
 - ✅ **Auto-Detection**: Automatically finds required files and directories
+- ✅ **Thread Control**: Configurable thread settings for parallel processing
 
 ## 📦 Installation
 
 ### Prerequisites
 
-- **Python**: 3.7 or higher
+- **Python**: 3.7.12 (specified in environment.yml for compatibility)
 - **Conda/Mamba**: For environment management
 - **System Tools**: BLAST+, Bowtie2, Samtools (automatically installed via conda)
+
+### Version Compatibility
+
+**Important**: HDMI has been tested with specific software versions to ensure compatibility:
+
+- **Python**: 3.7.12
+- **Pandas**: 1.3.5 (critical for DataFrame operations)
+- **NumPy**: 1.21.6
+- **BioPython**: 1.81
+- **Bowtie2**: 2.5.4
+- **Samtools**: 1.20
+
+Using different versions may cause compatibility issues, particularly with pandas DataFrame operations.
 
 ### Installation Methods
 
@@ -136,6 +150,8 @@ HDMI --help
 
 # Should show available commands:
 # detect, validate, merge, index, connect, profile, summary
+
+
 ```
 
 ## 🚀 Quick Start Guide
@@ -146,13 +162,13 @@ Here's a complete example using the provided test data:
 
 ```bash
 # 1. Build genome indices (run once)
-HDMI index -g genome_folder -m Group_info_test.txt -o output
+HDMI index -g genome_folder -m Group_info_test.txt -o output -t 10
 
 # 2. Detect HGT candidates
-HDMI detect -i genome_folder -o output -m Group_info_test.txt
+HDMI detect -i genome_folder -o output -m Group_info_test.txt -t 10
 
 # 3. Validate a sample
-HDMI validate -r1 data/sample1_R1.fq.gz -r2 data/sample1_R2.fq.gz -o output -g genome_folder -m Group_info_test.txt
+HDMI validate -r1 data/sample1_R1.fq.gz -r2 data/sample1_R2.fq.gz -o output -g genome_folder -m Group_info_test.txt -t 10
 
 # 4. Merge and filter results
 HDMI merge -o output -group Group_info_test.txt
@@ -161,20 +177,23 @@ HDMI merge -o output -group Group_info_test.txt
 HDMI connect -o output
 
 # 6. Profile analysis
-HDMI profile -r1 data/sample1_R1.fq.gz -r2 data/sample1_R2.fq.gz -o output
+HDMI profile -r1 data/sample1_R1.fq.gz -r2 data/sample1_R2.fq.gz -o output -t 10
 
 # 7. Generate final summary
 HDMI summary -o output
 ```
+
+**Note**: Use `-t 10` (or your preferred thread count) for steps that support parallel processing.
 
 ### Expected Results
 
 After running the complete pipeline, you should see:
 
 - **42 original HGT events** detected
-- **18 filtered HGT events** after validation
+- **18 filtered HGT events** after validation (Group_1 and Group_2 HGTs)
 - **36 final HGT elements** in the element table
 - **Clean file names** without confusing numbers
+- **All HGT events with evidence score 1.0** indicating strong metagenomic evidence
 
 ## 📖 Detailed Usage
 
@@ -183,17 +202,22 @@ After running the complete pipeline, you should see:
 Build genome indices for faster processing. This step only needs to be run once per genome set.
 
 ```bash
-HDMI index -g <genome_folder> -m <group_info> -o <output>
+HDMI index -g <genome_folder> -m <group_info> -o <output> [-t <threads>]
 ```
 
 **Parameters:**
 - `-g, --genome_path`: Path to folder containing genome FASTA files
 - `-m, --group_info`: Group information file (see format below)
 - `-o, --output`: Output directory (will create index subfolder)
+- `-t, --threads`: Number of threads for bowtie2-build (default: 1)
 
-**Example:**
+**Examples:**
 ```bash
+# Default single thread
 HDMI index -g genomes/ -m groups.txt -o results/
+
+# With custom threads
+HDMI index -g genomes/ -m groups.txt -o results/ -t 10
 ```
 
 ### HDMI detect
@@ -201,7 +225,7 @@ HDMI index -g genomes/ -m groups.txt -o results/
 Find HGT candidates using BLAST analysis. Supports batch processing for large datasets.
 
 ```bash
-HDMI detect -i <genome_folder> -o <output> -m <group_info> [-number <batch_num> -total <total_batches>]
+HDMI detect -i <genome_folder> -o <output> -m <group_info> [-number <batch_num> -total <total_batches>] [-t <threads>]
 ```
 
 **Parameters:**
@@ -210,6 +234,7 @@ HDMI detect -i <genome_folder> -o <output> -m <group_info> [-number <batch_num> 
 - `-m, --group_info`: Group information file
 - `-number, --task_number`: Batch number (for parallel processing)
 - `-total, --total_tasks`: Total number of batches
+- `-t, --threads`: Number of threads for parallel processing (default: 1)
 - `--count-only`: Show genome pair count without running detection
 
 **Examples:**
@@ -217,9 +242,16 @@ HDMI detect -i <genome_folder> -o <output> -m <group_info> [-number <batch_num> 
 # Single batch (default)
 HDMI detect -i genomes/ -o results/ -m groups.txt
 
+# Single batch with custom threads
+HDMI detect -i genomes/ -o results/ -m groups.txt -t 10
+
 # Batch processing (2 batches)
 HDMI detect -i genomes/ -o results/ -m groups.txt -number 1 -total 2
 HDMI detect -i genomes/ -o results/ -m groups.txt -number 2 -total 2
+
+# Batch processing with custom threads
+HDMI detect -i genomes/ -o results/ -m groups.txt -number 1 -total 2 -t 10
+HDMI detect -i genomes/ -o results/ -m groups.txt -number 2 -total 2 -t 10
 ```
 
 ### HDMI validate
@@ -227,7 +259,7 @@ HDMI detect -i genomes/ -o results/ -m groups.txt -number 2 -total 2
 Validate HGT events for individual samples using read mapping.
 
 ```bash
-HDMI validate -r1 <read1> -r2 <read2> [--prefix <sample_prefix>] -o <output> -g <genome_folder> -m <group_info> [--threads <threads>]
+HDMI validate -r1 <read1> -r2 <read2> [--prefix <sample_prefix>] -o <output> -g <genome_folder> -m <group_info> [-t <threads>]
 ```
 
 **Parameters:**
@@ -237,15 +269,18 @@ HDMI validate -r1 <read1> -r2 <read2> [--prefix <sample_prefix>] -o <output> -g 
 - `-o, --output`: Output directory
 - `-g, --genome_path`: Path to genome folder
 - `-m, --group_info`: Group information file
-- `--threads`: Number of threads (default: 8)
+- `-t, --threads`: Number of threads (default: 1)
 
 **Examples:**
 ```bash
 # With auto-extracted prefix
 HDMI validate -r1 sample1_R1.fq.gz -r2 sample1_R2.fq.gz -o results/ -g genomes/ -m groups.txt
 
-# With custom prefix
-HDMI validate -r1 sample1_R1.fq.gz -r2 sample1_R2.fq.gz --prefix my_sample -o results/ -g genomes/ -m groups.txt --threads 16
+# With custom prefix and threads
+HDMI validate -r1 sample1_R1.fq.gz -r2 sample1_R2.fq.gz --prefix my_sample -o results/ -g genomes/ -m groups.txt -t 10
+
+# With custom threads
+HDMI validate -r1 sample1_R1.fq.gz -r2 sample1_R2.fq.gz -o results/ -g genomes/ -m groups.txt -t 10
 ```
 
 ### HDMI merge
@@ -287,7 +322,7 @@ HDMI connect -o results/
 Analyze read coverage for simulated sequences.
 
 ```bash
-HDMI profile -r1 <read1> -r2 <read2> [--prefix <sample_prefix>] -o <output> [--threads <threads>]
+HDMI profile -r1 <read1> -r2 <read2> [--prefix <sample_prefix>] -o <output> [-t <threads>]
 ```
 
 **Parameters:**
@@ -295,11 +330,11 @@ HDMI profile -r1 <read1> -r2 <read2> [--prefix <sample_prefix>] -o <output> [--t
 - `-r2, --read2`: Read 2 file
 - `--prefix`: Sample prefix (auto-extracted if not provided)
 - `-o, --output`: Output directory
-- `--threads`: Number of threads (default: 1)
+- `-t, --threads`: Number of threads (default: 1)
 
 **Example:**
 ```bash
-HDMI profile -r1 sample1_R1.fq.gz -r2 sample1_R2.fq.gz -o results/ --threads 8
+HDMI profile -r1 sample1_R1.fq.gz -r2 sample1_R2.fq.gz -o results/ -t 10
 ```
 
 ### HDMI summary
@@ -543,6 +578,38 @@ ls -la output/
 chmod 755 output/
 ```
 
+#### 6. Pandas DataFrame Errors
+**Problem**: `AttributeError: 'DataFrame' object has no attribute 'map'` or similar pandas errors.
+
+**Cause**: Version incompatibility. HDMI requires specific software versions.
+
+**Solution**:
+```bash
+# Check current versions
+conda list | grep -E "(python|pandas|numpy)"
+
+# Recreate environment with correct versions
+conda deactivate
+conda env remove -n HDMI
+conda env create -f environment.yml
+conda activate HDMI
+pip install -e .
+
+# Verify versions
+python --version  # Should be 3.7.12
+python -c "import pandas; print(pandas.__version__)"  # Should be 1.3.5
+```
+
+#### 7. Inconsistent HGT Event Counts
+**Problem**: Different numbers of HGT events when using different environments.
+
+**Cause**: Different pandas versions handle DataFrame operations differently.
+
+**Solution**: Use the exact versions specified in `environment.yml`:
+- Python: 3.7.12
+- Pandas: 1.3.5
+- NumPy: 1.21.6
+
 ### Error Messages and Solutions
 
 | Error Message | Cause | Solution |
@@ -552,6 +619,8 @@ chmod 755 output/
 | `Profile directory not found` | Missing profile step | Run `HDMI profile` first |
 | `Memory error` | Dataset too large | Use batch processing |
 | `File not found` | Wrong file path | Check file locations |
+| `AttributeError: 'DataFrame' object has no attribute 'map'` | Pandas version incompatibility | Use pandas 1.3.5 |
+| `Inconsistent HGT event counts` | Different pandas versions | Use exact versions in environment.yml |
 
 ## ⚡ Performance Tips
 
@@ -624,6 +693,23 @@ wait
 **A**: 
 - **HGT_events.csv**: Raw HGT events with detailed BLAST information
 - **element_table.csv**: Final HGT elements with metagenomic evidence scores
+
+### Q: I get pandas DataFrame errors or AttributeError about 'map' method?
+**A**: This is a version compatibility issue. HDMI requires specific software versions:
+- **Pandas**: 1.3.5 (not newer versions like 2.x)
+- **Python**: 3.7.12
+- **NumPy**: 1.21.6
+
+Solution: Use the exact versions specified in `environment.yml`:
+```bash
+# Recreate environment with correct versions
+conda env remove -n HDMI
+conda env create -f environment.yml
+conda activate HDMI
+```
+
+### Q: Why do I get different numbers of HGT events with different environments?
+**A**: Different pandas versions handle DataFrame operations differently. HDMI has been tested and validated with pandas 1.3.5. Using other versions may produce inconsistent results.
 
 ## 📚 Citation
 

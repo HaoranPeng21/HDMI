@@ -11,17 +11,6 @@ GitHub: https://github.com/HaoranPeng21/HDMI
 import importlib.util
 import subprocess
 
-def check_and_install_module(module_name):
-    if importlib.util.find_spec(module_name) is None:
-        print(f"{module_name} is not installed. Installing...")
-        subprocess.check_call(["pip", "install", module_name])
-    else:
-        print(f"{module_name} is already installed.")
-
-modules = ["numpy", "pandas", "Bio", "pysam"]
-
-for module in modules:
-    check_and_install_module(module)
 
 import os
 import argparse
@@ -104,7 +93,7 @@ def main():
     parser.add_argument('-i', '--sample_id', default="sample", help='Sample ID.')
     parser.add_argument('-o', '--output', default="./", help='Working directory.')
     parser.add_argument('-table_dir', '--HGT_table_path', default="./", help='Path to the HGT table.')
-    parser.add_argument('-threads', '--threads', default=1, type=int, help='Number of threads.')
+    parser.add_argument('-t', '--threads', default=1, type=int, help='Number of threads.')
 
     args = parser.parse_args()
     os.makedirs(os.path.dirname(args.output), exist_ok=True)

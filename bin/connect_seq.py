@@ -10,8 +10,6 @@ GitHub: https://github.com/HaoranPeng21/HDMI
 
 import pandas as pd
 import numpy as np
-import importlib.util
-import subprocess
 import argparse
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord

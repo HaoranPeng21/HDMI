@@ -1,4 +1,4 @@
 bin.1.fa 1
 bin.2.fa 2
-bin3.fa 3
-bin4.fa 4
+bin.3.fa 3
+bin.4.fa 4

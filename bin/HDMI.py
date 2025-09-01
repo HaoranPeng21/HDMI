@@ -183,6 +183,10 @@ def cmd_detect(args):
     cmd.extend(['-number', str(task_number)])
     cmd.extend(['-total', str(total_tasks)])
     
+    # Add threads parameter
+    if hasattr(args, 'threads') and args.threads:
+        cmd.extend(['--threads', str(args.threads)])
+    
     run_command(cmd, "HDMI Detect: Finding HGT candidates")
     
     # Check for HGTdetect.py output
@@ -341,7 +345,7 @@ def cmd_validate(args):
     ]
     
     if args.threads:
-        cmd.extend(['-threads', str(args.threads)])
+        cmd.extend(['-t', str(args.threads)])
     if args.seed:
         cmd.extend(['-seed', str(args.seed)])
     if args.sth:
@@ -528,6 +532,8 @@ def cmd_index(args):
         
         # Build index
         cmd_rep = ['bowtie2-build', combined_genome_rep, combined_genome_rep_index]
+        if hasattr(args, 'threads') and args.threads:
+            cmd_rep.extend(['--threads', str(args.threads)])
         run_command(cmd_rep, "Building representative genome index")
             # os.remove(combined_genome_rep)  # Keep temporarily for inspection
     
@@ -556,6 +562,8 @@ def cmd_index(args):
         
         # Build index
         cmd_all = ['bowtie2-build', combined_genome_all, combined_genome_all_index]
+        if hasattr(args, 'threads') and args.threads:
+            cmd_all.extend(['--threads', str(args.threads)])
         run_command(cmd_all, "Building all genome index")
             # os.remove(combined_genome_all)  # Keep temporarily for inspection
     
@@ -694,7 +702,7 @@ def cmd_profile(args):
         '-i', args.prefix,
         '-o', profile_output,
         '-table_dir', args.HGT_table_path,
-        '-threads', str(args.threads)
+        '-t', str(args.threads)
     ]
     
     print(f"=== HDMI Profile: Analyzing read coverage ===")
@@ -804,6 +812,8 @@ Examples:
                              help='Task number for parallel processing (1-indexed, default: 1)')
     detect_parser.add_argument('-total', '--total_tasks', type=int, default=1,
                              help='Total number of parallel tasks (default: 1)')
+    detect_parser.add_argument('-t', '--threads', type=int, default=1,
+                             help='Number of threads for parallel processing (default: 1)')
     detect_parser.add_argument('--count-only', action='store_true',
                              help='Only count genome pairs and estimate performance without running detection')
     
@@ -819,12 +829,12 @@ Examples:
                                help='Output directory (default: result)')
     validate_parser.add_argument('-g', '--genome_path', required=True,
                                help='Directory containing genome FASTA files')
-    validate_parser.add_argument('-t', '--hgt_table',
+    validate_parser.add_argument('--hgt_table',
                                help='HGT events table (auto-found in output directory if not provided)')
     validate_parser.add_argument('-m', '--group_info', required=True,
                                help='Group info file')
-    validate_parser.add_argument('--threads', type=int, default=8,
-                               help='Number of threads (default: 8)')
+    validate_parser.add_argument('-t', '--threads', type=int, default=1,
+                               help='Number of threads (default: 1)')
     validate_parser.add_argument('--seed', type=int, default=42,
                                help='Random seed for reproducibility (default: 42)')
     validate_parser.add_argument('--sth', type=int, default=3,
@@ -853,6 +863,8 @@ Examples:
                             help='Group info file')
     index_parser.add_argument('-o', '--output',
                             help='Output directory (default: genome_folder parent/intermediate/index)')
+    index_parser.add_argument('-t', '--threads', type=int, default=1,
+                            help='Number of threads for bowtie2-build (default: 1)')
     
     # Removed test command as it's no longer needed
     
@@ -877,12 +889,12 @@ Examples:
                               help='Output directory (default: ./)')
     profile_parser.add_argument('-table_dir', '--HGT_table_path',
                               help='Path to HGT table (auto-found in output directory if not provided)')
-    profile_parser.add_argument('--threads', type=int, default=1,
+    profile_parser.add_argument('-t', '--threads', type=int, default=1,
                               help='Number of threads (default: 1)')
     
     # HDMI summary
     summary_parser = subparsers.add_parser('summary', help='Calculate metagenomic evidence from profile results')
-    summary_parser.add_argument('-p', '--profile_dir',
+    summary_parser.add_argument('--profile_dir',
                                 help='Directory containing profile results (auto-found in output/05_profile if not provided)')
     summary_parser.add_argument('-s', '--species_median',
                                 help='Species median abundance file (auto-found in output directory if not provided)')

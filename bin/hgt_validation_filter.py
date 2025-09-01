@@ -147,28 +147,11 @@ class HGTValidator:
         return self.species_existence_status
     
     def process_read_split(self):
-        """Process read split data to convert numeric values to validation format."""
+        """Process read split data."""
         print("Processing read split data...")
         
-        def convert_read_split_value(value):
-            """Convert read split numeric values to validation format."""
-            try:
-                val = int(value)
-                if val >= 2:
-                    return '2_2'
-                elif val == 1:
-                    return '1_1'
-                else:
-                    return '0_0'
-            except (ValueError, TypeError):
-                return '0_0'
-        
-        # Apply conversion to all sample columns (skip HGT_ID column)
-        processed_df = self.read_split_df.copy()
-        sample_cols = [col for col in processed_df.columns if col != 'HGT_ID']
-        processed_df[sample_cols] = processed_df[sample_cols].applymap(convert_read_split_value)
-        
-        return processed_df
+        # Read split data is already in correct format (X_Y), no conversion needed
+        return self.read_split_df.copy()
     
     def process_coverage_fraction(self):
         """Process coverage fraction data with threshold filtering."""
@@ -319,6 +302,7 @@ class HGTValidator:
         condition2 = (get_column_safe(counts_df, 'NA_2') + get_column_safe(counts_df, '0_2')) > 0
         condition3 = get_column_safe(counts_df, '2_2') > 0
         
+        # Apply strict filtering conditions
         filtered_df = counts_df.loc[(condition1 & condition2) | condition3]
         
         # Get filtered HGT list

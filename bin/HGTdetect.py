@@ -8,20 +8,7 @@ Author: Haoran Peng (penghr21@gmail.com)
 GitHub: https://github.com/HaoranPeng21/HDMI
 """
 
-import importlib.util
-import subprocess
 
-def check_and_install_module(module_name):
-    if importlib.util.find_spec(module_name) is None:
-        print(f"{module_name} is not installed. Installing...")
-        subprocess.check_call(["pip", "install", module_name])
-    else:
-        print(f"{module_name} is already installed.")
-
-modules = ["os", "csv", "concurrent.futures", "argparse","biopython"]
-
-for module in modules:
-    check_and_install_module(module)
 
 import os
 import csv
@@ -166,6 +153,7 @@ def main():
     parser.add_argument('-m', '--table', required=True, help='genomes groups information')
     parser.add_argument("-number", "--task_number", type=int, default=1, help="Task number (1-indexed)")
     parser.add_argument("-total", "--total_tasks", type=int, default=1, help="Total number of tasks")
+    parser.add_argument("-t", "--threads", type=int, default=1, help="Number of threads for parallel processing (default: 1)")
     args = parser.parse_args()
     task_number = args.task_number
     total_tasks = args.total_tasks
@@ -184,7 +172,7 @@ def main():
     end_index = start_index + chunk_size if task_number < total_tasks else None
     selected_mag_pairs = mag_pairs[start_index:end_index]
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
         results = list(executor.map(lambda pair_index_and_pair: blast_comparison(pair_index_and_pair[1], args.path, fasta_dict, pair_index_and_pair[0], len(selected_mag_pairs), task_number, args.output), enumerate(selected_mag_pairs)))
 
     final_output_table = set()

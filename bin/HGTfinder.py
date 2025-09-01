@@ -8,20 +8,7 @@ Author: Haoran Peng (penghr21@gmail.com)
 GitHub: https://github.com/HaoranPeng21/HDMI
 """
 
-import importlib.util
-import subprocess
 
-def check_and_install_module(module_name):
-    if importlib.util.find_spec(module_name) is None:
-        print(f"{module_name} is not installed. Installing...")
-        subprocess.check_call(["pip", "install", module_name])
-    else:
-        print(f"{module_name} is already installed.")
-
-modules = ["numpy", "pandas", "Bio", "pysam"]
-
-for module in modules:
-    check_and_install_module(module)
 
 import os
 import argparse
@@ -30,6 +17,7 @@ import pandas as pd
 from Bio import SeqIO
 import pysam
 import random
+import subprocess
 
 
 
@@ -171,12 +159,12 @@ def calculate_output_value(bam,details,sth):
     mag1_value = 2 if q_HGT_site_loose else 0
     mag2_value = 2 if s_HGT_site_loose else 0
 
-    loose_mode = f"{mag1_value:01}{mag2_value:01}"
+    loose_mode = f"{mag1_value:01}_{mag2_value:01}"
 
     mag1_value1 = 2 if q_HGT_site_strict and q_HGT_site_loose else 0
     mag2_value1 = 2 if s_HGT_site_strict and s_HGT_site_loose else 0
 
-    strict_mode = f"{mag1_value1:01}{mag2_value1:01}"
+    strict_mode = f"{mag1_value1:01}_{mag2_value1:01}"
 
     return loose_mode, strict_mode
 
@@ -334,7 +322,7 @@ def main():
     parser.add_argument('-table_dir', '--HGT_table_path', default="./", help='Path to the HGT table.')
     parser.add_argument('-group_info', '--group_info', required=True, help='Path to the group info file.')
     parser.add_argument('-seed', '--seed', default=42, type=int, help='Random seed for reproducible representative genome selection (default: 42).')
-    parser.add_argument('-threads', '--threads', default=1, type=int, help='Number of threads.')
+    parser.add_argument('-t', '--threads', default=1, type=int, help='Number of threads.')
     parser.add_argument('-sth', '--sth', default=3, type=int, help='reads span sites number')
 
     args = parser.parse_args()
