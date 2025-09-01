@@ -378,7 +378,7 @@ def main():
             print("Generating combined genome index for all genomes...")
             combined_genome_all = os.path.join(index_dir, 'combined_genome_all.fa')
             combine_fasta_files(args.genome_path, combined_genome_all)
-            run_subprocess_command_with_pipes(f"bowtie2-build {combined_genome_all} {combined_genome_all_index}")
+            run_subprocess_command_with_pipes(f"bowtie2-build --large-index {combined_genome_all} {combined_genome_all_index}")
             os.remove(combined_genome_all)
         
         print("Aligning reads to all genomes for HGT analysis...")

@@ -561,7 +561,7 @@ def cmd_index(args):
                                     combined.write(line)
         
         # Build index
-        cmd_all = ['bowtie2-build', combined_genome_all, combined_genome_all_index]
+        cmd_all = ['bowtie2-build', '--large-index', combined_genome_all, combined_genome_all_index]
         if hasattr(args, 'threads') and args.threads:
             cmd_all.extend(['--threads', str(args.threads)])
         run_command(cmd_all, "Building all genome index")
