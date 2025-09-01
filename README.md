@@ -32,17 +32,20 @@ HDMI summary -o output
 
 ## 📋 Table of Contents
 
-- [Overview](#overview)
-- [Installation](#installation)
-- [Quick Start Guide](#quick-start-guide)
-- [Detailed Usage](#detailed-usage)
-- [Input File Formats](#input-file-formats)
-- [Output Files](#output-files)
-- [Examples](#examples)
-- [Troubleshooting](#troubleshooting)
-- [Performance Tips](#performance-tips)
-- [FAQ](#faq)
-- [Citation](#citation)
+- [Overview](#-overview)
+- [Installation](#-installation)
+- [Quick Start Guide](#-quick-start-guide)
+- [Detailed Usage](#-detailed-usage)
+- [Input File Formats](#-input-file-formats)
+- [Output Files](#-output-files)
+- [Examples](#-examples)
+- [Troubleshooting](#-troubleshooting)
+- [Performance Tips](#-performance-tips)
+- [FAQ](#-faq)
+- [Citation](#-citation)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Contact](#-contact)
 
 ## 🔍 Overview
 
