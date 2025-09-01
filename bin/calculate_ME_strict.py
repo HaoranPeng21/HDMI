@@ -20,17 +20,24 @@ def calculate_custom_value(x):
     
     parts = [float(part) for part in str(x).split(",")[:3]] if len(str(x).split(",")) >= 3 else [np.nan, np.nan, np.nan]
     
-    if len(parts) == 3 and (min(parts[:2]) + parts[2]) != 0:
-        min_val = min(parts[:2])
-        conne = parts[2]
+    if len(parts) == 3:
+        # HI = min(HI₁, HI₂) if min(HI₁, HI₂) ≥ 2 else 0
+        HI = min(parts[:2]) if min(parts[:2]) >= 2 else 0
         
-        # Lower threshold: consider evidence if there are at least 2 reads
-        if (min_val + conne) >= 2:
-            result = 1.0  # Return 1 to indicate existence
+        # nHI = nHI if nHI ≥ 2 else 0
+        nHI = parts[2] if parts[2] >= 2 else 0
+        
+        # If both HI and nHI are 0, return NA
+        if HI == 0 and nHI == 0:
+            result = np.nan
+        # HGT presence = HI / (HI + nHI) > 0
+        elif HI / (HI + nHI) > 0:
+            result = 1.0
+        # HGT absence = nHI / (HI + nHI) = 0 (when HI = 0 and nHI > 0)
         else:
-            result = 0.0  # Return 0 to indicate non-existence
+            result = 0.0
     else:
-        result = 0.0  # Return 0 to indicate non-existence
+        result = np.nan
         
     return result
 
