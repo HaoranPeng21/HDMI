@@ -118,6 +118,7 @@ Thumbs.db
 # HDMI specific
 output/
 test/
+test_output/
 *.bam
 *.bai
 *.sam
