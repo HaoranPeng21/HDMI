@@ -46,7 +46,7 @@ def process_profile_results(profile_dir, species_median_file, output_dir):
     
     # If output_dir is a directory, create the output file path
     if os.path.isdir(output_dir):
-        output_file = os.path.join(output_dir, 'ME_connect_Process_stricter.csv')
+        output_file = os.path.join(output_dir, 'element_table.csv')
     else:
         output_file = output_dir
     
@@ -93,7 +93,7 @@ def process_profile_results(profile_dir, species_median_file, output_dir):
         
         # Save the result
         merged_df.to_csv(output_file, sep=',', index=False)
-        print(f"ME strict analysis saved to: {output_file}")
+        print(f"Element table saved to: {output_file}")
     else:
         print("No data to save!")
 

@@ -28,7 +28,26 @@ def run_subprocess_command_with_pipes(cmd):
 def generate_coverage_data(sample_id, read1, read2, output, threads):
     output_bam = os.path.join(output, f'{sample_id}_simi.bam')
     output_index = os.path.join(output, 'simi_sequences_index')
-    # Execute bowtie2
+    
+    # Check if index files already exist
+    index_files = [
+        f"{output_index}.1.bt2",
+        f"{output_index}.2.bt2", 
+        f"{output_index}.3.bt2",
+        f"{output_index}.4.bt2",
+        f"{output_index}.rev.1.bt2",
+        f"{output_index}.rev.2.bt2"
+    ]
+    
+    if all(os.path.exists(f) for f in index_files):
+        print(f"Index files already exist at {output_index}, skipping bowtie2-build")
+    else:
+        print(f"Building bowtie2 index at {output_index}...")
+        # Build index first
+        build_cmd = f"bowtie2-build {os.path.join(output, 'simi_sequences.fasta')} {output_index}"
+        run_subprocess_command_with_pipes(build_cmd)
+    
+    # Execute bowtie2 alignment
     cmd1 = (f"bowtie2 -a --very-sensitive -x {output_index} -1 {read1} -2 {read2} -p {threads} --no-unal | "
             f"samtools view -@ {threads} -bS - | "
             f"samtools sort -@ {threads} -o {output_bam}")
