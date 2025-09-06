@@ -561,7 +561,7 @@ def cmd_index(args):
                                     combined.write(line)
         
         # Build index
-        cmd_all = ['bowtie2-build', '--large-index', combined_genome_all, combined_genome_all_index]
+        cmd_all = ['bowtie2-build', combined_genome_all, combined_genome_all_index]
         if hasattr(args, 'threads') and args.threads:
             cmd_all.extend(['--threads', str(args.threads)])
         run_command(cmd_all, "Building all genome index")
@@ -628,9 +628,11 @@ def cmd_connect(args):
         
         if os.path.exists(simi_sequences_fasta):
             print(f"Building bowtie2 index for simi_sequences.fasta...")
-            index_cmd = f"bowtie2-build {simi_sequences_fasta} {simi_sequences_index}"
+            index_cmd = ['bowtie2-build', simi_sequences_fasta, simi_sequences_index]
+            if hasattr(args, 'threads') and args.threads:
+                index_cmd.extend(['--threads', str(args.threads)])
             try:
-                subprocess.run(index_cmd, shell=True, check=True)
+                subprocess.run(index_cmd, check=True)
                 print("✓ Bowtie2 index built successfully")
             except subprocess.CalledProcessError as e:
                 print(f"✗ Bowtie2 index building failed: {e}")
@@ -876,6 +878,8 @@ Examples:
                               help='Contig sequence file (auto-found in output directory if not provided)')
     connect_parser.add_argument('-o', '--output', default='./',
                               help='Output directory (default: ./)')
+    connect_parser.add_argument('-t', '--threads', type=int, default=1,
+                              help='Number of threads for bowtie2-build (default: 1)')
     
     # HDMI profile
     profile_parser = subparsers.add_parser('profile', help='Analyze read coverage for simulated sequences')
