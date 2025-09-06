@@ -26,11 +26,40 @@ import argparse
 import subprocess
 import shutil
 from pathlib import Path
+from Bio import SeqIO
 
 
 def get_script_dir():
     """Get the directory containing HDMI scripts."""
     return os.path.dirname(os.path.abspath(__file__))
+
+
+def merge_fasta_files_with_duplicates(file1, file2, output_file):
+    """
+    Merge two FASTA files, handling duplicate sequence IDs by keeping the first occurrence.
+    
+    Args:
+        file1: Path to first FASTA file
+        file2: Path to second FASTA file  
+        output_file: Path to output merged FASTA file
+    """
+    sequences = {}
+    
+    # Read sequences from first file
+    if os.path.exists(file1):
+        for record in SeqIO.parse(file1, "fasta"):
+            if record.id not in sequences:
+                sequences[record.id] = record
+    
+    # Read sequences from second file (only add if not already present)
+    if os.path.exists(file2):
+        for record in SeqIO.parse(file2, "fasta"):
+            if record.id not in sequences:
+                sequences[record.id] = record
+    
+    # Write merged sequences to output file
+    with open(output_file, 'w') as out_handle:
+        SeqIO.write(sequences.values(), out_handle, "fasta")
 
 
 def extract_sample_prefix(read1_path):
@@ -290,17 +319,13 @@ def cmd_detect(args):
                 shutil.copy2(source_file, target_files[file_type])
                 print(f"  ✓ Copied {os.path.basename(source_file)} to {os.path.basename(target_files[file_type])}")
         
-        # Create combined contig file
+        # Create combined contig file with duplicate handling
         combined_contig_file = os.path.join(final_output, 'sequences_contig_combined.fa')
-        with open(combined_contig_file, 'w') as combined:
-            # Add sequences from q file
-            if os.path.exists(target_files['contig_q']):
-                with open(target_files['contig_q'], 'r') as q:
-                    combined.write(q.read())
-            # Add sequences from s file
-            if os.path.exists(target_files['contig_s']):
-                with open(target_files['contig_s'], 'r') as s:
-                    combined.write(s.read())
+        merge_fasta_files_with_duplicates(
+            target_files['contig_q'], 
+            target_files['contig_s'], 
+            combined_contig_file
+        )
         print(f"  ✓ Created combined contig file: {combined_contig_file}")
 
 
@@ -628,11 +653,9 @@ def cmd_connect(args):
         
         if os.path.exists(simi_sequences_fasta):
             print(f"Building bowtie2 index for simi_sequences.fasta...")
-            index_cmd = ['bowtie2-build', simi_sequences_fasta, simi_sequences_index]
-            if hasattr(args, 'threads') and args.threads:
-                index_cmd.extend(['--threads', str(args.threads)])
+            index_cmd = f"bowtie2-build {simi_sequences_fasta} {simi_sequences_index}"
             try:
-                subprocess.run(index_cmd, check=True)
+                subprocess.run(index_cmd, shell=True, check=True)
                 print("✓ Bowtie2 index built successfully")
             except subprocess.CalledProcessError as e:
                 print(f"✗ Bowtie2 index building failed: {e}")
@@ -878,8 +901,6 @@ Examples:
                               help='Contig sequence file (auto-found in output directory if not provided)')
     connect_parser.add_argument('-o', '--output', default='./',
                               help='Output directory (default: ./)')
-    connect_parser.add_argument('-t', '--threads', type=int, default=1,
-                              help='Number of threads for bowtie2-build (default: 1)')
     
     # HDMI profile
     profile_parser = subparsers.add_parser('profile', help='Analyze read coverage for simulated sequences')
