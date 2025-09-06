@@ -25,7 +25,7 @@ HDMI index -g genome_folder -m Group_info_test.txt -o output -t 10
 HDMI detect -i genome_folder -o output -m Group_info_test.txt -t 10
 HDMI validate -r1 data/sample1_R1.fq.gz -r2 data/sample1_R2.fq.gz -o output -g genome_folder -m Group_info_test.txt -t 10
 HDMI merge -o output -group Group_info_test.txt
-HDMI connect -o output
+HDMI connect -o output -t 10
 HDMI profile -r1 data/sample1_R1.fq.gz -r2 data/sample1_R2.fq.gz -o output -t 10
 HDMI summary -o output
 ```
@@ -177,7 +177,7 @@ HDMI validate -r1 data/sample1_R1.fq.gz -r2 data/sample1_R2.fq.gz -o output -g g
 HDMI merge -o output -group Group_info_test.txt
 
 # 5. Connect sequences
-HDMI connect -o output
+HDMI connect -o output -t 10
 
 # 6. Profile analysis
 HDMI profile -r1 data/sample1_R1.fq.gz -r2 data/sample1_R2.fq.gz -o output -t 10
