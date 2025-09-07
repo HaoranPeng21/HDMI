@@ -347,7 +347,7 @@ def main():
     if not index_exists(combined_genome_index):
         print("Generating combined genome index for representative genomes...")
         combine_fasta_files(args.genome_path, combined_genome, selected_representatives)
-        run_subprocess_command_with_pipes(f"bowtie2-build {combined_genome} {combined_genome_index}")
+        run_subprocess_command_with_pipes(f"bowtie2-build --large-index {combined_genome} {combined_genome_index}")
         os.remove(combined_genome)
     else:
         print("Representative genome index files already exist. Skipping the bowtie2-build step.")

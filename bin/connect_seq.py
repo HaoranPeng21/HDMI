@@ -36,7 +36,11 @@ def extract_positions_from_hgt_id(hgt_id, row):
 def extract_and_simulate_sequences(elements_info_path, contigs_path, output_dir):
     #elements_info = pd.read_csv(elements_info_path)
     elements_info = elements_info_path
-    contigs = SeqIO.to_dict(SeqIO.parse(contigs_path, "fasta"))
+    # Manually parse FASTA to handle duplicate sequence IDs
+    contigs = {}
+    for record in SeqIO.parse(contigs_path, "fasta"):
+        if record.id not in contigs:
+            contigs[record.id] = record
 
     new_info_rows = []
     sequences = {}  # Dictionary to hold sequences to be written
@@ -47,6 +51,9 @@ def extract_and_simulate_sequences(elements_info_path, contigs_path, output_dir)
         contig_name, start, end = extract_positions_from_hgt_id(hgt_id, row)
 
         if contig_name not in added_contigs:
+            if contig_name not in contigs:
+                print(f"Warning: Contig {contig_name} not found in sequences file, skipping...")
+                continue
             original_seq = contigs[contig_name].seq
             original_seq_record = SeqRecord(Seq(str(original_seq)), id=contig_name, description="")
             sequences[contig_name] = original_seq_record

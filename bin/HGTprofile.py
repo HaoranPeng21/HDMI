@@ -27,7 +27,8 @@ def run_subprocess_command_with_pipes(cmd):
 
 def generate_coverage_data(sample_id, read1, read2, output, threads):
     output_bam = os.path.join(output, f'{sample_id}_simi.bam')
-    output_index = os.path.join(output, 'simi_sequences_index')
+    # Use index files from 04_connect directory (hardcoded path)
+    output_index = os.path.join(os.path.dirname(output), '..', '04_connect', 'simi_sequences_index')
     
     # Check if index files already exist
     index_files = [

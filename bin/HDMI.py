@@ -556,7 +556,7 @@ def cmd_index(args):
                                 combined.write(line)
         
         # Build index
-        cmd_rep = ['bowtie2-build', combined_genome_rep, combined_genome_rep_index]
+        cmd_rep = ['bowtie2-build', '--large-index', combined_genome_rep, combined_genome_rep_index]
         if hasattr(args, 'threads') and args.threads:
             cmd_rep.extend(['--threads', str(args.threads)])
         run_command(cmd_rep, "Building representative genome index")
@@ -586,7 +586,7 @@ def cmd_index(args):
                                     combined.write(line)
         
         # Build index
-        cmd_all = ['bowtie2-build', combined_genome_all, combined_genome_all_index]
+        cmd_all = ['bowtie2-build', '--large-index', combined_genome_all, combined_genome_all_index]
         if hasattr(args, 'threads') and args.threads:
             cmd_all.extend(['--threads', str(args.threads)])
         run_command(cmd_all, "Building all genome index")
@@ -653,7 +653,7 @@ def cmd_connect(args):
         
         if os.path.exists(simi_sequences_fasta):
             print(f"Building bowtie2 index for simi_sequences.fasta...")
-            index_cmd = f"bowtie2-build {simi_sequences_fasta} {simi_sequences_index}"
+            index_cmd = f"bowtie2-build --threads {args.threads} {simi_sequences_fasta} {simi_sequences_index}"
             try:
                 subprocess.run(index_cmd, shell=True, check=True)
                 print("✓ Bowtie2 index built successfully")
@@ -707,16 +707,8 @@ def cmd_profile(args):
     
     # Check if all index files exist
     if all(os.path.exists(f) for f in source_index_files):
-        print(f"Copying simi_sequences_index files to {profile_output}...")
-        import shutil
-        try:
-            for source_file in source_index_files:
-                target_file = os.path.join(profile_output, os.path.basename(source_file))
-                shutil.copy2(source_file, target_file)
-            print(f"✓ Index files copied to {profile_output}")
-        except Exception as e:
-            print(f"✗ Index copying failed: {e}")
-            raise
+        print(f"Index files exist in {table_dir}, no copying needed")
+        print(f"✓ Using existing index files directly")
     
     script_path = os.path.join(get_script_dir(), 'HGTprofile.py')
     
@@ -901,6 +893,8 @@ Examples:
                               help='Contig sequence file (auto-found in output directory if not provided)')
     connect_parser.add_argument('-o', '--output', default='./',
                               help='Output directory (default: ./)')
+    connect_parser.add_argument('-t', '--threads', type=int, default=1,
+                              help='Number of threads for bowtie2-build (default: 1)')
     
     # HDMI profile
     profile_parser = subparsers.add_parser('profile', help='Analyze read coverage for simulated sequences')
