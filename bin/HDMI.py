@@ -7,13 +7,10 @@ Author: Haoran Peng (penghr21@gmail.com)
 GitHub: https://github.com/HaoranPeng21/HDMI
 
 Usage:
-    HDMI index      - Build genome indices for faster processing
     HDMI detect     - Detect HGT candidates from MAGs
-    HDMI validate   - Validate HGT events for a single sample
-    HDMI merge      - Merge and filter results from multiple samples
-    HDMI connect    - Extract HGT sequences and generate simulated sequences
-    HDMI profile    - Analyze read coverage for simulated sequences
-    HDMI summary    - Generate final element table with metagenomic evidence
+    HDMI index      - Build optimized genome indices and extract HGT sequences (integrates connect)
+    HDMI profile    - Validate HGT events and analyze read coverage (integrates validate)
+    HDMI summary    - Merge results and generate final element table (integrates merge)
     HDMI --help     - Show this help message
 
 Author: Haoran Peng (penghr21@gmail.com)
@@ -329,77 +326,13 @@ def cmd_detect(args):
         print(f"  ✓ Created combined contig file: {combined_contig_file}")
 
 
-def cmd_validate(args):
-    """HDMI validate: HGT validation for a single sample."""
-    
-    # Auto-extract sample prefix if not provided
-    if not hasattr(args, 'prefix') or not args.prefix:
-        args.prefix = extract_sample_prefix(args.read1)
-        print(f"Auto-extracted sample prefix: {args.prefix}")
-    
-    # Auto-find HGT table if not provided
-    if not hasattr(args, 'hgt_table') or not args.hgt_table:
-        hgt_table = find_file_in_output(args.output, 'HGT_events_raw.csv')
-        if hgt_table:
-            args.hgt_table = hgt_table
-            print(f"Auto-found HGT table: {args.hgt_table}")
-        else:
-            print("ERROR: HGT table not found. Please run HDMI detect first or specify with -t")
-            sys.exit(1)
-    
-    # Set sample_id for compatibility
-    args.sample_id = args.prefix
-    
-    # Auto-create output directory structure
-    sample_output = auto_create_dirs(args.output, 'intermediate', '02_validation', args.prefix)
-    expected_dirs = ['read_split', 'fraction', 'abundance', 'intermediate']
-    for dirname in expected_dirs:
-        os.makedirs(os.path.join(sample_output, dirname), exist_ok=True)
-    
-    script_path = os.path.join(get_script_dir(), 'HGTfinder.py')
-    
-    cmd = [
-        'python', script_path,
-        '-r1', args.read1,
-        '-r2', args.read2,
-        '-i', args.prefix,
-        '-o', sample_output,
-        '-mag_dir', args.genome_path,
-        '-table_dir', args.hgt_table,
-        '-group_info', args.group_info
-    ]
-    
-    if args.threads:
-        cmd.extend(['-t', str(args.threads)])
-    if args.seed:
-        cmd.extend(['-seed', str(args.seed)])
-    if args.sth:
-        cmd.extend(['-sth', str(args.sth)])
-    
-    run_command(cmd, f"HDMI Validate: Processing sample {args.sample_id}")
-    
-    # Check for expected outputs
-    success = True
-    for dirname in expected_dirs:
-        dirpath = os.path.join(sample_output, dirname)
-        if not os.path.exists(dirpath):
-            print(f"Warning: Expected directory not found: {dirpath}")
-            success = False
-    
-    if success:
-        print(f"\nSuccess! Sample validation complete: {sample_output}")
-        print("Output directories created:")
-        for dirname in expected_dirs:
-            print(f"  - {dirname}/")
-    else:
-        print(f"\nWarning: Some expected outputs may be missing")
-    
-    # Clean up BAM files to save disk space
-    cleanup_bam_files(sample_output)
+# Removed cmd_validate function as it's now integrated into cmd_profile
 
 
-def cmd_merge(args):
-    """HDMI merge: Merge and filter results from multiple samples."""
+# Removed cmd_merge and cmd_connect functions as they are now integrated into cmd_summary
+
+def cmd_profile(args):
+    """HDMI profile: Validate HGT events and analyze read coverage (integrates validate functionality)"""
     
     # Auto-find validation directory if not provided
     if not hasattr(args, 'samples_dir') or not args.samples_dir:
@@ -472,13 +405,15 @@ def cmd_merge(args):
 
 
 def cmd_index(args):
-    """HDMI index: Pre-build genome indices for faster sample processing."""
+    """HDMI index: Build optimized genome indices based on HGT detection results."""
     import subprocess
     import random
+    import pandas as pd
+    from Bio import SeqIO
     script_dir = get_script_dir()
     
-    print("=== HDMI INDEX: Pre-building genome indices ===")
-    print("This needs to be done only once and will speed up sample processing")
+    print("=== HDMI INDEX: Building optimized genome indices ===")
+    print("This builds indices only for contigs involved in HGT events")
     
     # Check required files
     genome_path = args.genome_path
@@ -491,6 +426,44 @@ def cmd_index(args):
     if not os.path.exists(group_info):
         print(f"ERROR: Group info file not found: {group_info}")
         sys.exit(1)
+    
+    # Check if HGT events file exists (from HDMI detect)
+    hgt_events_file = None
+    if hasattr(args, 'output') and args.output:
+        hgt_events_file = os.path.join(args.output, 'HGT_events_raw.csv')
+        if not os.path.exists(hgt_events_file):
+            # Try to find in intermediate directory
+            hgt_events_file = os.path.join(args.output, 'intermediate', '01_detection', 'HGT_events_raw.csv')
+    
+    if not hgt_events_file or not os.path.exists(hgt_events_file):
+        print("ERROR: HGT events file not found. Please run HDMI detect first.")
+        print("Expected location: output/HGT_events_raw.csv or output/intermediate/01_detection/HGT_events_raw.csv")
+        sys.exit(1)
+    
+    print(f"Found HGT events file: {hgt_events_file}")
+    
+    # Read HGT events to extract involved contigs
+    print("Extracting contigs involved in HGT events...")
+    hgt_df = pd.read_csv(hgt_events_file)
+    
+    # Add HGT_ID column if it doesn't exist
+    if 'HGT_ID' not in hgt_df.columns:
+        hgt_df['HGT_ID'] = [f"HGT{i+1}" for i in range(len(hgt_df))]
+        # Save updated HGT_events_raw.csv
+        hgt_df.to_csv(hgt_events_file, index=False)
+        print(f"Added HGT_ID column to HGT_events_raw.csv")
+    
+    # Extract unique contigs from HGT events
+    involved_contigs = set()
+    for _, row in hgt_df.iterrows():
+        # Add query contig
+        query_contig = f"{row['MAG 1'].replace('.fa', '')}_{row['query_congtig_id']}"
+        involved_contigs.add(query_contig)
+        # Add subject contig  
+        subject_contig = f"{row['MAG 2'].replace('.fa', '')}_{row['subject_contig_id']}"
+        involved_contigs.add(subject_contig)
+    
+    print(f"Found {len(involved_contigs)} unique contigs involved in HGT events")
     
     # Read group info and select representatives (using fixed seed for consistency)
     print("Selecting representative genomes...")
@@ -532,7 +505,7 @@ def cmd_index(args):
         index_dir = auto_create_dirs(os.path.dirname(genome_path), 'intermediate', 'index')
     print(f"Index files will be stored in: {index_dir}")
     
-    # Build representative genome index
+    # Build representative genome index (for abundance calculation)
     print("\n--- Building Representative Genome Index ---")
     combined_genome_rep = os.path.join(index_dir, 'combined_genome_representatives.fa')
     combined_genome_rep_index = os.path.join(index_dir, 'combined_genome_representatives_index')
@@ -560,43 +533,120 @@ def cmd_index(args):
         if hasattr(args, 'threads') and args.threads:
             cmd_rep.extend(['--threads', str(args.threads)])
         run_command(cmd_rep, "Building representative genome index")
-            # os.remove(combined_genome_rep)  # Keep temporarily for inspection
     
-    # Build all genome index
-    print("\n--- Building All Genome Index ---")
-    combined_genome_all = os.path.join(index_dir, 'combined_genome_all.fa')
-    combined_genome_all_index = os.path.join(index_dir, 'combined_genome_all_index')
+    # Build optimized HGT contigs index (only contigs involved in HGT events)
+    print("\n--- Building Optimized HGT Contigs Index ---")
+    combined_genome_hgt = os.path.join(index_dir, 'combined_genome_hgt_contigs.fa')
+    combined_genome_hgt_index = os.path.join(index_dir, 'combined_genome_hgt_contigs_index')
     
-    # Check if all genome index already exists
-    if any(os.path.exists(combined_genome_all_index + ext) for ext in ['.1.bt2', '.1.bt2l']):
-        print("All genome index already exists. Skipping...")
+    # Check if HGT contigs index already exists
+    if any(os.path.exists(combined_genome_hgt_index + ext) for ext in ['.1.bt2', '.1.bt2l']):
+        print("HGT contigs index already exists. Skipping...")
     else:
-        # Combine all genomes
-        with open(combined_genome_all, 'w') as combined:
-            for root, _, files in os.walk(genome_path):
-                for file in sorted(files):  # Sort for consistency
-                    if (file.endswith('.fa') or file.endswith('.fasta')) and file != os.path.basename(combined_genome_all):
-                        mag_name = os.path.splitext(file)[0]  # Get mag name without extension
-                        with open(os.path.join(root, file), 'r') as f:
-                            for line in f:
-                                if line.startswith('>'):
-                                    # Add MAG prefix to contig names to avoid duplicates
-                                    combined.write(f">{mag_name}_{line[1:]}")
-                                else:
-                                    combined.write(line)
+        # Extract only the contigs involved in HGT events
+        print(f"Extracting {len(involved_contigs)} contigs from genome files...")
+        with open(combined_genome_hgt, 'w') as combined:
+            contigs_written = 0
+            for genome_file in os.listdir(genome_path):
+                if genome_file.endswith(('.fa', '.fasta')):
+                    genome_name = os.path.splitext(genome_file)[0]
+                    genome_file_path = os.path.join(genome_path, genome_file)
+                    
+                    # Parse FASTA and extract only involved contigs
+                    for record in SeqIO.parse(genome_file_path, "fasta"):
+                        contig_id = f"{genome_name}_{record.id}"
+                        if contig_id in involved_contigs:
+                            combined.write(f">{contig_id}\n{str(record.seq)}\n")
+                            contigs_written += 1
+        
+        print(f"Extracted {contigs_written} contigs to optimized index")
         
         # Build index
-        cmd_all = ['bowtie2-build', '--large-index', combined_genome_all, combined_genome_all_index]
+        cmd_hgt = ['bowtie2-build', '--large-index', combined_genome_hgt, combined_genome_hgt_index]
         if hasattr(args, 'threads') and args.threads:
-            cmd_all.extend(['--threads', str(args.threads)])
-        run_command(cmd_all, "Building all genome index")
-            # os.remove(combined_genome_all)  # Keep temporarily for inspection
+            cmd_hgt.extend(['--threads', str(args.threads)])
+        run_command(cmd_hgt, "Building optimized HGT contigs index")
     
-    print("\n=== INDEX BUILDING COMPLETE ===")
-    print(f"Representative genome index: {combined_genome_rep_index}.*")
-    print(f"All genome index: {combined_genome_all_index}.*")
-    print("You can now run sample validation much faster!")
-    print("Use: HDMI validate [options] for each sample")
+    # === INTEGRATED CONNECT FUNCTIONALITY ===
+    print("\n--- Integrated Connect: Generating Simulated Sequences ---")
+    
+    # Check if simulated sequences already exist
+    simi_sequences_fasta = os.path.join(index_dir, 'simi_sequences.fasta')
+    simi_sequences_index = os.path.join(index_dir, 'simi_sequences_index')
+    elements_info_raw = os.path.join(index_dir, 'elements_info_raw.csv')
+    
+    if (os.path.exists(simi_sequences_fasta) and 
+        any(os.path.exists(simi_sequences_index + ext) for ext in ['.1.bt2', '.1.bt2l']) and
+        os.path.exists(elements_info_raw)):
+        print("Simulated sequences and index already exist. Skipping connect step...")
+    else:
+        # Import connect_seq functionality
+        from connect_seq import extract_and_simulate_sequences
+        
+        print("Generating simulated sequences (removing HGT fragments)...")
+        
+        # Create elements_info by splitting HGT events into query and subject records
+        elements_info_rows = []
+        
+        for idx, row in hgt_df.iterrows():
+            # Get HGT event ID from the dataframe
+            hgt_event_id = row['HGT_ID']
+            
+            # Query contig record
+            query_contig_id = f"{row['MAG 1'].replace('.fa', '')}_{row['query_congtig_id']}"
+            # Extract contig name from Sequence_query (format: NODE_X_length_Y_cov_Z_start_end)
+            query_contig_name = row['Sequence_query'].split('_')[0] + '_' + row['Sequence_query'].split('_')[1] + '_' + row['Sequence_query'].split('_')[2] + '_' + row['Sequence_query'].split('_')[3] + '_' + row['Sequence_query'].split('_')[4]
+            query_element_id = f"{query_contig_name}_{row['q_start']}_{row['q_end']}"
+            elements_info_rows.append({
+                'ID': query_element_id,  # Renamed from HGT_ID to ID
+                'HGT_ID': hgt_event_id,  # New column for HGT event ID
+                'Element_Type': 'query',  # New column for element type
+                'contig_id': query_contig_id,
+                'start': row['q_start'],
+                'end': row['q_end']
+            })
+            
+            # Subject contig record  
+            subject_contig_id = f"{row['MAG 2'].replace('.fa', '')}_{row['subject_contig_id']}"
+            # Extract contig name from Sequence_subject (format: NODE_X_length_Y_cov_Z_start_end)
+            subject_contig_name = row['Sequence_subject'].split('_')[0] + '_' + row['Sequence_subject'].split('_')[1] + '_' + row['Sequence_subject'].split('_')[2] + '_' + row['Sequence_subject'].split('_')[3] + '_' + row['Sequence_subject'].split('_')[4]
+            subject_element_id = f"{subject_contig_name}_{row['s_start']}_{row['s_end']}"
+            elements_info_rows.append({
+                'ID': subject_element_id,  # Renamed from HGT_ID to ID
+                'HGT_ID': hgt_event_id,  # New column for HGT event ID
+                'Element_Type': 'subject',  # New column for element type
+                'contig_id': subject_contig_id,
+                'start': row['s_start'],
+                'end': row['s_end']
+            })
+        
+        # Create DataFrame from the rows
+        elements_info = pd.DataFrame(elements_info_rows)
+        print(f"Generated {len(elements_info)} elements_info rows")
+        if len(elements_info) > 0:
+            print(f"First few rows:\n{elements_info.head()}")
+        
+        # Generate simulated sequences
+        extract_and_simulate_sequences(elements_info, combined_genome_hgt, index_dir)
+        
+        # Build index for simulated sequences
+        if os.path.exists(simi_sequences_fasta):
+            print("Building bowtie2 index for simulated sequences...")
+            cmd_simi = ['bowtie2-build', '--large-index', simi_sequences_fasta, simi_sequences_index]
+            if hasattr(args, 'threads') and args.threads:
+                cmd_simi.extend(['--threads', str(args.threads)])
+            run_command(cmd_simi, "Building simulated sequences index")
+            print("✓ Simulated sequences index built successfully")
+        else:
+            print("✗ Simulated sequences file not found")
+    
+    print(f"\n✓ Integrated index+connect building completed!")
+    print(f"Representative genome index: {combined_genome_rep_index}")
+    print(f"Optimized HGT contigs index: {combined_genome_hgt_index}")
+    print(f"Simulated sequences index: {simi_sequences_index}")
+    print(f"Contigs in HGT index: {len(involved_contigs)}")
+    print(f"Elements info raw: {elements_info_raw}")
+    print(f"\nUse: HDMI validate [options] for each sample")
 
 
 # Removed cmd_test function as it's no longer needed
@@ -679,121 +729,114 @@ def cmd_profile(args):
         print(f"Auto-extracted sample prefix: {args.prefix}")
     
     # Auto-find HGT table if not provided
-    if not hasattr(args, 'HGT_table_path') or not args.HGT_table_path:
-        hgt_table = find_file_in_output(args.output, 'new_elements_info.csv')
+    if not hasattr(args, 'hgt_table') or not args.hgt_table:
+        hgt_table = find_file_in_output(args.output, 'HGT_events_raw.csv')
         if hgt_table:
-            args.HGT_table_path = hgt_table
-            print(f"Auto-found HGT table: {args.HGT_table_path}")
+            args.hgt_table = hgt_table
+            print(f"Auto-found HGT table: {args.hgt_table}")
         else:
-            print("ERROR: HGT table not found. Please run HDMI connect first or specify with -table_dir")
+            print("ERROR: HGT table not found. Please run HDMI detect first or specify with -t")
             sys.exit(1)
     
     # Set sample_id for compatibility
     args.sample_id = args.prefix
     
-    # Create output directory
-    profile_output = auto_create_dirs(args.output, 'intermediate', '05_profile', args.prefix)
+    # Auto-create output directory structure
+    sample_output = auto_create_dirs(args.output, 'intermediate', '02_validation', args.prefix)
+    expected_dirs = ['read_split', 'fraction', 'abundance', 'intermediate', 'temp']
+    for dirname in expected_dirs:
+        os.makedirs(os.path.join(sample_output, dirname), exist_ok=True)
     
-    # Copy simi_sequences_index files to output directory if they exist in parent
-    table_dir = os.path.dirname(args.HGT_table_path)
-    source_index_files = [
-        os.path.join(table_dir, 'simi_sequences_index.1.bt2'),
-        os.path.join(table_dir, 'simi_sequences_index.2.bt2'),
-        os.path.join(table_dir, 'simi_sequences_index.3.bt2'),
-        os.path.join(table_dir, 'simi_sequences_index.4.bt2'),
-        os.path.join(table_dir, 'simi_sequences_index.rev.1.bt2'),
-        os.path.join(table_dir, 'simi_sequences_index.rev.2.bt2')
-    ]
-    
-    # Check if all index files exist
-    if all(os.path.exists(f) for f in source_index_files):
-        print(f"Index files exist in {table_dir}, no copying needed")
-        print(f"✓ Using existing index files directly")
-    
-    script_path = os.path.join(get_script_dir(), 'HGTprofile.py')
+    script_path = os.path.join(get_script_dir(), 'HGTfinder.py')
     
     cmd = [
         'python', script_path,
         '-r1', args.read1,
         '-r2', args.read2,
         '-i', args.prefix,
-        '-o', profile_output,
-        '-table_dir', args.HGT_table_path,
-        '-t', str(args.threads)
+        '-o', sample_output,
+        '-mag_dir', args.genome_path,
+        '-table_dir', args.hgt_table,
+        '-group_info', args.group_info
     ]
     
-    print(f"=== HDMI Profile: Analyzing read coverage ===")
-    print(f"Command: {' '.join(cmd)}")
+    if args.threads:
+        cmd.extend(['-t', str(args.threads)])
+    if hasattr(args, 'seed') and args.seed:
+        cmd.extend(['-seed', str(args.seed)])
+    if hasattr(args, 'sth') and args.sth:
+        cmd.extend(['-sth', str(args.sth)])
     
-    try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        if result.stdout:
-            print(result.stdout)
-        if result.stderr:
-            print(result.stderr)
-        print(f"✓ Profile analysis completed successfully")
-    except subprocess.CalledProcessError as e:
-        print(f"ERROR: Profile analysis failed with return code {e.returncode}")
-        print(f"STDERR: {e.stderr}")
-        raise
+    run_command(cmd, f"HDMI Profile: Processing sample {args.sample_id} (integrates validate functionality)")
+    
+    # Check for expected outputs
+    success = True
+    for dirname in expected_dirs:
+        dirpath = os.path.join(sample_output, dirname)
+        if not os.path.exists(dirpath) or not os.listdir(dirpath):
+            print(f"WARNING: {dirname} directory is missing or empty")
+            success = False
+    
+    if success:
+        print(f"✓ Profile analysis completed successfully for sample {args.sample_id}")
+    else:
+        print(f"WARNING: Some expected outputs are missing for sample {args.sample_id}")
+
     
     # Clean up BAM files to save disk space
-    cleanup_bam_files(profile_output)
+    cleanup_bam_files(sample_output)
 
 def cmd_summary(args):
-    """Summary Analysis: Calculate metagenomic evidence from profile results"""
+    """HDMI summary: Merge results and generate final element table (integrates merge functionality)"""
     
-    # Auto-find profile directory if not provided
-    if not hasattr(args, 'profile_dir') or not args.profile_dir:
-        profile_dir = os.path.join(args.output, 'intermediate', '05_profile')
-        if os.path.exists(profile_dir):
-            args.profile_dir = profile_dir
-            print(f"Auto-found profile directory: {args.profile_dir}")
+    # Auto-find validation directory if not provided
+    if not hasattr(args, 'samples_dir') or not args.samples_dir:
+        validation_dir = os.path.join(args.output, 'intermediate', '02_validation')
+        if os.path.exists(validation_dir):
+            args.samples_dir = validation_dir
+            print(f"Auto-found validation directory: {args.samples_dir}")
         else:
-            print("ERROR: Profile directory not found. Please run HDMI profile first or specify with -p")
+            print("ERROR: Validation directory not found. Please run HDMI profile first or specify with -i")
             sys.exit(1)
     
-    # Auto-find species median file if not provided
-    if not hasattr(args, 'species_median') or not args.species_median:
-        species_median = find_file_in_output(args.output, 'species_median.csv')
-        if species_median:
-            args.species_median = species_median
-            print(f"Auto-found species median file: {args.species_median}")
+    # Auto-find HGT events file if not provided
+    if not hasattr(args, 'hgt_events') or not args.hgt_events:
+        hgt_events = find_file_in_output(args.output, 'HGT_events_raw.csv')
+        if hgt_events:
+            args.hgt_events = hgt_events
+            print(f"Auto-found HGT events file: {args.hgt_events}")
         else:
-            print("ERROR: Species median file not found. Please run HDMI merge first or specify with -s")
+            print("ERROR: HGT events file not found. Please run HDMI detect first or specify with -hgt")
             sys.exit(1)
     
-    script_path = os.path.join(get_script_dir(), 'calculate_ME_strict.py')
+    # Group info must be provided by user
+    if not hasattr(args, 'group_info') or not args.group_info:
+        print("ERROR: Group info file must be specified with -group")
+        sys.exit(1)
+    
+    # Create output directory and subdirectories
+    merge_output = auto_create_dirs(args.output, 'intermediate', '03_final')
+    os.makedirs(os.path.join(merge_output, 'merged'), exist_ok=True)
+    
+    script_path = os.path.join(get_script_dir(), 'merge_and_filter.py')
     
     cmd = [
         'python', script_path,
-        '-p', args.profile_dir,
-        '-s', args.species_median,
-        '-o', args.output
+        '-i', args.samples_dir,
+        '-hgt', args.hgt_events,
+        '-group', args.group_info,
+        '-o', merge_output
     ]
     
-    print(f"=== HDMI ME Strict: Calculating metagenomic evidence ===")
-    print(f"Command: {' '.join(cmd)}")
+    # Use default sample pattern to match all directories
+    cmd.extend(['--sample_pattern', '*'])
     
-    try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        if result.stdout:
-            print(result.stdout)
-        if result.stderr:
-            print(result.stderr)
-        print(f"✓ ME strict analysis completed successfully")
-        
-        # Copy final result to output directory and rename
-        import shutil
-        me_strict_file = os.path.join(args.output, 'ME_connect_Process_stricter.csv')
-        element_table_file = os.path.join(args.output, 'element_table.csv')
-        if os.path.exists(me_strict_file):
-            shutil.copy2(me_strict_file, element_table_file)
-            print(f"  ✓ Copied ME_connect_Process_stricter.csv to element_table.csv")
-    except subprocess.CalledProcessError as e:
-        print(f"ERROR: ME strict analysis failed with return code {e.returncode}")
-        print(f"STDERR: {e.stderr}")
-        raise
+    if args.threshold:
+        cmd.extend(['-t', str(args.threshold)])
+    if args.temp_dir:
+        cmd.extend(['--temp_dir', args.temp_dir])
+    
+    run_command(cmd, "HDMI Summary: Merging and filtering results (integrates merge functionality)")
 
 
 def main():
@@ -804,13 +847,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  HDMI index -g genomes/ -m groups.txt -o output              # Pre-build indices (run once)
   HDMI detect -i genomes/ -o output -m groups.txt             # Detect HGT candidates
-  HDMI validate -r1 reads_R1.fq -r2 reads_R2.fq --prefix sample1 -o output -g genomes/ -m groups.txt
-  HDMI merge -o output -group groups.txt                      # Merge and filter results
-  HDMI connect -o output                                       # Extract HGT sequences
-  HDMI profile -r1 reads_R1.fq -r2 reads_R2.fq --prefix sample1 -o output
-  HDMI summary -o output/element_table.csv                    # Generate final summary
+  HDMI index -g genomes/ -m groups.txt -o output              # Build optimized indices and extract sequences
+  HDMI profile -r1 reads_R1.fq -r2 reads_R2.fq --prefix sample1 -o output -g genomes/ -m groups.txt
+  HDMI summary -o output -group groups.txt                    # Merge results and generate final summary
         """
     )
     
@@ -834,46 +874,9 @@ Examples:
     detect_parser.add_argument('--count-only', action='store_true',
                              help='Only count genome pairs and estimate performance without running detection')
     
-    # HDMI validate
-    validate_parser = subparsers.add_parser('validate', help='Validate HGT events for a single sample')
-    validate_parser.add_argument('-r1', '--read1', required=True,
-                               help='Path to read1 FASTQ file')
-    validate_parser.add_argument('-r2', '--read2', required=True,
-                               help='Path to read2 FASTQ file')
-    validate_parser.add_argument('--prefix', '--sample_id',
-                               help='Sample prefix (auto-extracted from read1 filename if not provided)')
-    validate_parser.add_argument('-o', '--output', default='result',
-                               help='Output directory (default: result)')
-    validate_parser.add_argument('-g', '--genome_path', required=True,
-                               help='Directory containing genome FASTA files')
-    validate_parser.add_argument('--hgt_table',
-                               help='HGT events table (auto-found in output directory if not provided)')
-    validate_parser.add_argument('-m', '--group_info', required=True,
-                               help='Group info file')
-    validate_parser.add_argument('-t', '--threads', type=int, default=1,
-                               help='Number of threads (default: 1)')
-    validate_parser.add_argument('--seed', type=int, default=42,
-                               help='Random seed for reproducibility (default: 42)')
-    validate_parser.add_argument('--sth', type=int, default=3,
-                               help='Read span threshold (default: 3)')
-    
-    # HDMI merge
-    merge_parser = subparsers.add_parser('merge', help='Merge and filter results from multiple samples')
-    merge_parser.add_argument('-i', '--samples_dir',
-                            help='Directory containing sample subdirectories (auto-found in output/02_validation if not provided)')
-    merge_parser.add_argument('-hgt', '--hgt_events',
-                            help='Original HGT events file (auto-found in output directory if not provided)')
-    merge_parser.add_argument('-group', '--group_info', required=True,
-                            help='Group info file')
-    merge_parser.add_argument('-o', '--output', default='result',
-                            help='Output directory (default: result)')
-    merge_parser.add_argument('--threshold', type=float, default=1.0,
-                            help='Abundance threshold (default: 1.0)')
-    merge_parser.add_argument('--temp_dir',
-                            help='Temporary directory for merged files')
     
     # HDMI index
-    index_parser = subparsers.add_parser('index', help='Pre-build genome indices (run once for faster processing)')
+    index_parser = subparsers.add_parser('index', help='Build optimized genome indices and extract HGT sequences (integrates connect functionality)')
     index_parser.add_argument('-g', '--genome_path', required=True,
                             help='Directory containing genome FASTA files')
     index_parser.add_argument('-m', '--group_info', required=True,
@@ -885,40 +888,44 @@ Examples:
     
     # Removed test command as it's no longer needed
     
-    # HDMI connect
-    connect_parser = subparsers.add_parser('connect', help='Extract HGT sequences and generate simulated sequences')
-    connect_parser.add_argument('-i', '--hgt_info',
-                              help='HGT events information table (auto-found in output directory if not provided)')
-    connect_parser.add_argument('-s', '--contig_seq',
-                              help='Contig sequence file (auto-found in output directory if not provided)')
-    connect_parser.add_argument('-o', '--output', default='./',
-                              help='Output directory (default: ./)')
-    connect_parser.add_argument('-t', '--threads', type=int, default=1,
-                              help='Number of threads for bowtie2-build (default: 1)')
     
     # HDMI profile
-    profile_parser = subparsers.add_parser('profile', help='Analyze read coverage for simulated sequences')
+    profile_parser = subparsers.add_parser('profile', help='Validate HGT events and analyze read coverage (integrates validate functionality)')
     profile_parser.add_argument('-r1', '--read1', required=True,
                               help='Path to read1 FASTQ file')
     profile_parser.add_argument('-r2', '--read2', required=True,
                               help='Path to read2 FASTQ file')
     profile_parser.add_argument('--prefix', '--sample_id',
                               help='Sample prefix (auto-extracted from read1 filename if not provided)')
-    profile_parser.add_argument('-o', '--output', default='./',
-                              help='Output directory (default: ./)')
-    profile_parser.add_argument('-table_dir', '--HGT_table_path',
-                              help='Path to HGT table (auto-found in output directory if not provided)')
+    profile_parser.add_argument('-o', '--output', default='result',
+                              help='Output directory (default: result)')
+    profile_parser.add_argument('-g', '--genome_path', required=True,
+                              help='Directory containing genome FASTA files')
+    profile_parser.add_argument('--hgt_table',
+                              help='HGT events table (auto-found in output directory if not provided)')
+    profile_parser.add_argument('-m', '--group_info', required=True,
+                              help='Group info file')
     profile_parser.add_argument('-t', '--threads', type=int, default=1,
                               help='Number of threads (default: 1)')
+    profile_parser.add_argument('--seed', type=int, default=42,
+                              help='Random seed for reproducibility (default: 42)')
+    profile_parser.add_argument('--sth', type=int, default=2,
+                              help='Read span threshold (default: 2)')
     
     # HDMI summary
-    summary_parser = subparsers.add_parser('summary', help='Calculate metagenomic evidence from profile results')
-    summary_parser.add_argument('--profile_dir',
-                                help='Directory containing profile results (auto-found in output/05_profile if not provided)')
-    summary_parser.add_argument('-s', '--species_median',
-                                help='Species median abundance file (auto-found in output directory if not provided)')
-    summary_parser.add_argument('-o', '--output', default='output',
-                                help='Output directory (default: output)')
+    summary_parser = subparsers.add_parser('summary', help='Merge results and generate final element table (integrates merge functionality)')
+    summary_parser.add_argument('-i', '--samples_dir',
+                                help='Directory containing validation results (auto-found in output/intermediate/02_validation if not provided)')
+    summary_parser.add_argument('-hgt', '--hgt_events',
+                                help='HGT events file (auto-found in output directory if not provided)')
+    summary_parser.add_argument('-group', '--group_info', required=True,
+                                help='Group info file')
+    summary_parser.add_argument('-o', '--output', default='result',
+                                help='Output directory (default: result)')
+    summary_parser.add_argument('--threshold', type=float, default=1.0,
+                                help='Abundance threshold (default: 1.0)')
+    summary_parser.add_argument('--temp_dir',
+                                help='Temporary directory for merged files')
     
     # Parse arguments
     args = parser.parse_args()
@@ -932,18 +939,16 @@ Examples:
     try:
         if args.command == 'detect':
             cmd_detect(args)
-        elif args.command == 'validate':
-            cmd_validate(args)
-        elif args.command == 'merge':
-            cmd_merge(args)
         elif args.command == 'index':
             cmd_index(args)
-        elif args.command == 'connect':
-            cmd_connect(args)
         elif args.command == 'profile':
             cmd_profile(args)
         elif args.command == 'summary':
             cmd_summary(args)
+        else:
+            print(f"ERROR: Unknown command '{args.command}'")
+            print("Available commands: detect, index, profile, summary")
+            sys.exit(1)
     except Exception as e:
         print(f"\nERROR: {args.command} command failed - {str(e)}")
         sys.exit(1)

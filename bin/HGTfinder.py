@@ -11,6 +11,7 @@ GitHub: https://github.com/HaoranPeng21/HDMI
 
 
 import os
+import sys
 import argparse
 import numpy as np
 import pandas as pd
@@ -138,35 +139,61 @@ def get_pair_reads(bam,contig,position):
     return forward_reads, reverse_reads
 
 def get_spanning_reads(bam, q_contig_id, q_start, q_end,s_contig_id,s_start,s_end,sth):
-    """Return a tuple containing lists of forward and reverse reads crossing the given position in the BAM file."""
+    """Return loose mode validation results for query and subject HGT sites.
+    
+    Args:
+        bam: BAM file object
+        q_contig_id, q_start, q_end: Query contig information
+        s_contig_id, s_start, s_end: Subject contig information  
+        sth: Span threshold (minimum number of spanning reads required)
+    
+    Returns:
+        tuple: (q_HGT_site_loose, s_HGT_site_loose) - Boolean values indicating if each site meets the threshold
+    """
 
     q_start_forward_reads, q_start_reverse_reads = get_pair_reads(bam, q_contig_id, q_start)
     q_end_forward_reads, q_end_reverse_reads = get_pair_reads(bam, q_contig_id, q_end)
     s_start_forward_reads, s_start_reverse_reads = get_pair_reads(bam, s_contig_id, s_start)
     s_end_forward_reads, s_end_reverse_reads = get_pair_reads(bam, s_contig_id, s_end)
     q_HGT_site_loose = len(q_start_forward_reads) + len(q_start_reverse_reads) >= sth and len(q_end_forward_reads) + len(q_end_reverse_reads) >= sth
-    q_HGT_site_strict = len(q_start_forward_reads) > 0 and len(q_start_reverse_reads) > 0 and len(q_end_forward_reads) > 0 and len(q_end_reverse_reads) > 0
     s_HGT_site_loose = len(s_start_forward_reads) + len(s_start_reverse_reads) >= sth and len(s_end_forward_reads) + len(s_end_reverse_reads) >= sth
-    s_HGT_site_strict = len(s_start_forward_reads) > 0 and len(s_start_reverse_reads) > 0 and len(s_end_forward_reads) > 0 and len(s_end_reverse_reads) > 0 
 
-    return q_HGT_site_loose, q_HGT_site_strict,s_HGT_site_loose,s_HGT_site_strict
+    return q_HGT_site_loose, s_HGT_site_loose
 
-def calculate_output_value(bam,details,sth):
-    q_contig_id, q_start, q_end, hgt_length, genome_name_mag1,s_contig_id,s_start, s_end, genome_name_mag2 = details
-    # For q_contig_id
-    q_HGT_site_loose, q_HGT_site_strict,s_HGT_site_loose,s_HGT_site_strict = get_spanning_reads(bam, q_contig_id, q_start, q_end,s_contig_id,s_start,s_end,sth)
+def get_spanning_reads_profile(bam_file, contig, position):
+    """Return the number of reads crossing the given position in the BAM file (for profile analysis)."""
+    try:
+        reads = list(bam_file.fetch(contig, position, position + 1))
+        forward_reads = [read for read in reads if not read.is_reverse and read.pos < position-10 and read.pos + read.alen > position+10]
+        reverse_reads = [read for read in reads if read.is_reverse and read.pos < position-10 and read.pos + read.alen > position+10]
+        return len(forward_reads) + len(reverse_reads)
+    except ValueError:
+        # Contig not found in BAM file
+        print(f"Warning: Contig {contig} not found in BAM file")
+        return 0
 
+def calculate_output_value(bam, details, sth):
+    """Calculate read split validation result for an HGT event.
+    
+    Args:
+        bam: BAM file object
+        details: Tuple containing HGT event details (q_contig_id, q_start, q_end, hgt_length, genome_name_mag1, s_contig_id, s_start, s_end, genome_name_mag2)
+        sth: Span threshold (minimum number of spanning reads required)
+    
+    Returns:
+        str: Validation result in format "X_Y" where X and Y are 2 (pass) or 0 (fail) for query and subject respectively
+    """
+    q_contig_id, q_start, q_end, hgt_length, genome_name_mag1, s_contig_id, s_start, s_end, genome_name_mag2 = details
+    
+    # Get validation results for query and subject sites
+    q_HGT_site_loose, s_HGT_site_loose = get_spanning_reads(bam, q_contig_id, q_start, q_end, s_contig_id, s_start, s_end, sth)
+
+    # Convert boolean results to numeric values (2 = pass, 0 = fail)
     mag1_value = 2 if q_HGT_site_loose else 0
     mag2_value = 2 if s_HGT_site_loose else 0
 
-    loose_mode = f"{mag1_value:01}_{mag2_value:01}"
-
-    mag1_value1 = 2 if q_HGT_site_strict and q_HGT_site_loose else 0
-    mag2_value1 = 2 if s_HGT_site_strict and s_HGT_site_loose else 0
-
-    strict_mode = f"{mag1_value1:01}_{mag2_value1:01}"
-
-    return loose_mode, strict_mode
+    # Return result in "X_Y" format
+    return f"{mag1_value:01}_{mag2_value:01}"
 
 def load_coverage_data(bam):
     coverage_data = {}
@@ -202,7 +229,9 @@ def compute_HGT_coverage(coverage_data, contig_id, start, end):
 
 def extract_HGT_coverage(table_file):
     df = pd.read_csv(table_file, sep=",")
-    df["HGT_ID"] = ["HGT_seq_" + str(i + 1) for i in range(len(df))]
+    # Use existing HGT_ID from HGT_events_raw.csv directly
+    if 'HGT_ID' not in df.columns:
+        raise ValueError("HGT_ID column not found in HGT_events_raw.csv")
     df.set_index("HGT_ID", inplace=True)
     
     # Add MAG prefixes to contig IDs to match BAM file format
@@ -323,7 +352,7 @@ def main():
     parser.add_argument('-group_info', '--group_info', required=True, help='Path to the group info file.')
     parser.add_argument('-seed', '--seed', default=42, type=int, help='Random seed for reproducible representative genome selection (default: 42).')
     parser.add_argument('-t', '--threads', default=1, type=int, help='Number of threads.')
-    parser.add_argument('-sth', '--sth', default=3, type=int, help='reads span sites number')
+    parser.add_argument('-sth', '--sth', default=2, type=int, help='reads span sites number')
 
     args = parser.parse_args()
 
@@ -367,24 +396,22 @@ def main():
     else:
         print(f"{bam_file_representatives} already exists. Skipping alignment step.")
 
-    # For HGT processing, we still need alignment to all genomes
-    # Check if we need to create a full genome alignment (only if doing HGT analysis)
-    bam_file_all = os.path.join(args.output, 'intermediate', f'{args.sample_id}_combined_genome_all.bam')
-    combined_genome_all_index = os.path.join(index_dir, 'combined_genome_all_index')
+    # For HGT processing, use optimized HGT contigs index (only contigs involved in HGT events)
+    # Check if we need to create HGT contigs alignment
+    bam_file_hgt = os.path.join(args.output, 'intermediate', f'{args.sample_id}_combined_genome_hgt_contigs.bam')
+    combined_genome_hgt_index = os.path.join(index_dir, 'combined_genome_hgt_contigs_index')
     
-    # Only create full genome index and alignment if it doesn't exist
-    if not os.path.exists(bam_file_all):
-        if not index_exists(combined_genome_all_index):
-            print("Generating combined genome index for all genomes...")
-            combined_genome_all = os.path.join(index_dir, 'combined_genome_all.fa')
-            combine_fasta_files(args.genome_path, combined_genome_all)
-            run_subprocess_command_with_pipes(f"bowtie2-build --large-index {combined_genome_all} {combined_genome_all_index}")
-            os.remove(combined_genome_all)
+    # Only create HGT contigs index and alignment if it doesn't exist
+    if not os.path.exists(bam_file_hgt):
+        if not index_exists(combined_genome_hgt_index):
+            print("ERROR: Optimized HGT contigs index not found. Please run HDMI index first.")
+            print(f"Expected index: {combined_genome_hgt_index}")
+            sys.exit(1)
         
-        print("Aligning reads to all genomes for HGT analysis...")
-        bam_file_all = generate_coverage_data(args.sample_id, args.read1, args.read2, args.output, combined_genome_all_index, args.threads, "_all")
+        print("Aligning reads to optimized HGT contigs for HGT analysis...")
+        bam_file_hgt = generate_coverage_data(args.sample_id, args.read1, args.read2, args.output, combined_genome_hgt_index, args.threads, "_hgt_contigs")
     else:
-        print(f"{bam_file_all} already exists. Skipping full genome alignment step.")
+        print(f"{bam_file_hgt} already exists. Skipping HGT contigs alignment step.")
 
     # Index both BAM files
     bai_file_representatives = bam_file_representatives + ".bai"
@@ -393,14 +420,14 @@ def main():
     else:
         print(f"{bai_file_representatives} already exists. Skipping indexing step.")
 
-    bai_file_all = bam_file_all + ".bai"
-    if not os.path.exists(bai_file_all):
-        run_subprocess_command_with_pipes(f"samtools index {bam_file_all}")
+    bai_file_hgt = bam_file_hgt + ".bai"
+    if not os.path.exists(bai_file_hgt):
+        run_subprocess_command_with_pipes(f"samtools index {bam_file_hgt}")
     else:
-        print(f"{bai_file_all} already exists. Skipping indexing step.")
+        print(f"{bai_file_hgt} already exists. Skipping indexing step.")
 
-    # Use the full genome BAM for HGT analysis
-    bam = pysam.AlignmentFile(bam_file_all, "rb")
+    # Use the optimized HGT contigs BAM for HGT analysis
+    bam = pysam.AlignmentFile(bam_file_hgt, "rb")
     # Extract coverage data
     coverage_data = load_coverage_data(bam)
 
@@ -409,23 +436,16 @@ def main():
 
     # Save readsplit results
     loose_output = {}
-    strict_output = {}
 
     for hgt_id, details in hgt_data.items():
-        loose_value,strict_value = calculate_output_value(bam, details,args.sth)
-
+        loose_value = calculate_output_value(bam, details,args.sth)
         loose_output[hgt_id] = loose_value
-        strict_output[hgt_id] = strict_value
 
     bam.close()
     os.makedirs(f"{args.output}/read_split", exist_ok=True)
     loose_file = os.path.join(args.output, 'read_split' ,f'{args.sample_id}_loose.csv')
     loose_df = pd.DataFrame(list(loose_output.items()), columns=['HGT_ID', f'LLD_{args.sample_id}'])
     loose_df.to_csv(loose_file, sep=",", index=False)
-
-    strict_file = os.path.join(args.output,'read_split', f'{args.sample_id}_strict.csv')
-    strict_df = pd.DataFrame(list(strict_output.items()), columns=['HGT_ID', f'LLD_{args.sample_id}'])
-    strict_df.to_csv(strict_file, sep=",", index=False)
 
     # Save coverage results
     output_values = {}
@@ -438,6 +458,66 @@ def main():
     output_file = os.path.join(args.output,'fraction', f'{args.sample_id}_fraction.csv')
     output_df = pd.DataFrame(list(output_values.items()), columns=['HGT_ID', f'LLD_{args.sample_id}'])
     output_df.to_csv(output_file, sep=",", index=False)
+
+    # === INTEGRATED PROFILE ANALYSIS ===
+    # Align reads to simulated sequences for profile analysis
+    print("=== INTEGRATED PROFILE ANALYSIS ===")
+    simi_sequences_index = os.path.join(index_dir, 'simi_sequences_index')
+    bam_file_simi = os.path.join(args.output, 'intermediate', f'{args.sample_id}_simi_sequences.bam')
+    
+    if not os.path.exists(bam_file_simi):
+        if not index_exists(simi_sequences_index):
+            print("ERROR: Simulated sequences index not found. Please run HDMI index first.")
+            print(f"Expected index: {simi_sequences_index}")
+            sys.exit(1)
+        
+        print("Aligning reads to simulated sequences for profile analysis...")
+        bam_file_simi = generate_coverage_data(args.sample_id, args.read1, args.read2, args.output, simi_sequences_index, args.threads, "_simi_sequences")
+    else:
+        print(f"{bam_file_simi} already exists. Skipping simulated sequences alignment step.")
+
+    # Index simulated sequences BAM file
+    bai_file_simi = bam_file_simi + ".bai"
+    if not os.path.exists(bai_file_simi):
+        run_subprocess_command_with_pipes(f"samtools index {bam_file_simi}")
+    else:
+        print(f"{bai_file_simi} already exists. Skipping indexing step.")
+
+    # Process profile analysis using simulated sequences
+    elements_info_raw = os.path.join(index_dir, 'elements_info_raw.csv')
+    if os.path.exists(elements_info_raw):
+        print("Processing profile analysis...")
+        bam_simi = pysam.AlignmentFile(bam_file_simi, "rb")
+        elements_info = pd.read_csv(elements_info_raw)
+        
+        results = []
+
+        for _, row in elements_info.iterrows():
+            hgt_id = row['ID']  # Changed from 'HGT_ID' to 'ID'
+            contig_name = row['contig_name']
+            contig_start = row['contig_start']
+            contig_end = row['contig_end']
+            hgt_id_sim = row['HGT_ID_sim']
+            hgt_id_sim_position = row['HGT_ID_sim_position']
+
+            # Get spanning reads counts for this element (query or subject)
+            start_counts = get_spanning_reads_profile(bam_simi, contig_name, contig_start)
+            end_counts = get_spanning_reads_profile(bam_simi, contig_name, contig_end)
+            sim_counts = get_spanning_reads_profile(bam_simi, hgt_id_sim, hgt_id_sim_position)
+
+            result = f"{hgt_id}\t{start_counts},{end_counts},{sim_counts}"
+            results.append(result)
+
+        bam_simi.close()
+        
+        # Save profile results
+        os.makedirs(f"{args.output}/temp", exist_ok=True)
+        profile_output_path = os.path.join(args.output, "temp", f"{args.sample_id}_reads_counts_very_all.tsv")
+        with open(profile_output_path, 'w') as f:
+            f.writelines("\n".join(results))
+        print(f"Profile analysis results saved to: {profile_output_path}")
+    else:
+        print(f"Warning: {elements_info_raw} not found. Skipping profile analysis.")
 
     # Calculate abundance for representative genomes
     print("Calculating abundance for representative genomes...")
@@ -465,7 +545,7 @@ def main():
     print(f"Intermediate files saved in: {os.path.join(args.output, 'intermediate')}")
     print(f"BAM files:")
     print(f"  - Representative genomes: {bam_file_representatives}")
-    print(f"  - All genomes: {bam_file_all}")
+    print(f"  - HGT contigs: {bam_file_hgt}")
     print(f"Analysis complete!")
 
 if __name__ == '__main__':
