@@ -580,6 +580,11 @@ def cmd_index(args):
         os.path.exists(elements_info_raw)):
         print("Simulated sequences and index already exist. Skipping connect step...")
     else:
+        # Add script directory to Python path
+        script_dir = get_script_dir()
+        if script_dir not in sys.path:
+            sys.path.insert(0, script_dir)
+        
         # Import connect_seq functionality
         from connect_seq import extract_and_simulate_sequences
         
