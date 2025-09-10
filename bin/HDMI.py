@@ -331,77 +331,7 @@ def cmd_detect(args):
 
 # Removed cmd_merge and cmd_connect functions as they are now integrated into cmd_summary
 
-def cmd_profile(args):
-    """HDMI profile: Validate HGT events and analyze read coverage (integrates validate functionality)"""
-    
-    # Auto-find validation directory if not provided
-    if not hasattr(args, 'samples_dir') or not args.samples_dir:
-        validation_dir = os.path.join(args.output, 'intermediate', '02_validation')
-        if os.path.exists(validation_dir):
-            args.samples_dir = validation_dir
-            print(f"Auto-found validation directory: {args.samples_dir}")
-        else:
-            print("ERROR: Validation directory not found. Please run HDMI validate first or specify with -i")
-            sys.exit(1)
-    
-    # Auto-find HGT events file if not provided
-    if not hasattr(args, 'hgt_events') or not args.hgt_events:
-        hgt_events = find_file_in_output(args.output, 'HGT_events_raw.csv')
-        if hgt_events:
-            args.hgt_events = hgt_events
-            print(f"Auto-found HGT events file: {args.hgt_events}")
-        else:
-            print("ERROR: HGT events file not found. Please run HDMI detect first or specify with -hgt")
-            sys.exit(1)
-    
-    # Group info must be provided by user
-    if not hasattr(args, 'group_info') or not args.group_info:
-        print("ERROR: Group info file must be specified with -group")
-        sys.exit(1)
-    
-    # Create output directory and subdirectories
-    merge_output = auto_create_dirs(args.output, 'intermediate', '03_final')
-    os.makedirs(os.path.join(merge_output, 'merged'), exist_ok=True)
-    
-    script_path = os.path.join(get_script_dir(), 'merge_and_filter.py')
-    
-    cmd = [
-        'python', script_path,
-        '-i', args.samples_dir,
-        '-hgt', args.hgt_events,
-        '-group', args.group_info,
-        '-o', merge_output
-    ]
-    
-    # Use default sample pattern to match all directories
-    cmd.extend(['--sample_pattern', '*'])
-    
-    if args.threshold:
-        cmd.extend(['-t', str(args.threshold)])
-    if args.temp_dir:
-        cmd.extend(['--temp_dir', args.temp_dir])
-    
-    run_command(cmd, "HDMI Merge: Merging and filtering results")
-    
-    final_file = os.path.join(merge_output, 'HGT_events.csv')
-    if os.path.exists(final_file):
-        print(f"\nSuccess! Final HGT events: {final_file}")
-        
-        # Copy final results to output root directory
-        import shutil
-        files_to_copy = [
-            ('HGT_events.csv', 'HGT_events.csv'),
-            ('HGT_events_raw.csv', 'HGT_events_raw.csv')
-        ]
-        
-        for src, dst in files_to_copy:
-            src_path = os.path.join(merge_output, src)
-            dst_path = os.path.join(args.output, dst)
-            if os.path.exists(src_path):
-                shutil.copy2(src_path, dst_path)
-                print(f"  ✓ Copied {src} to output root")
-    else:
-        print(f"\nWarning: Expected final output not found: {final_file}")
+############ Removed legacy cmd_profile (summary-like) to avoid confusion
 
 
 def cmd_index(args):
@@ -599,9 +529,8 @@ def cmd_index(args):
             
             # Query contig record
             query_contig_id = f"{row['MAG 1'].replace('.fa', '')}_{row['query_congtig_id']}"
-            # Extract contig name from Sequence_query (format: NODE_X_length_Y_cov_Z_start_end)
-            query_contig_name = row['Sequence_query'].split('_')[0] + '_' + row['Sequence_query'].split('_')[1] + '_' + row['Sequence_query'].split('_')[2] + '_' + row['Sequence_query'].split('_')[3] + '_' + row['Sequence_query'].split('_')[4]
-            query_element_id = f"{query_contig_name}_{row['q_start']}_{row['q_end']}"
+            # Build robust element ID without relying on Sequence_* name format
+            query_element_id = f"{query_contig_id}_{row['q_start']}_{row['q_end']}"
             elements_info_rows.append({
                 'ID': query_element_id,  # Renamed from HGT_ID to ID
                 'HGT_ID': hgt_event_id,  # New column for HGT event ID
@@ -613,9 +542,8 @@ def cmd_index(args):
             
             # Subject contig record  
             subject_contig_id = f"{row['MAG 2'].replace('.fa', '')}_{row['subject_contig_id']}"
-            # Extract contig name from Sequence_subject (format: NODE_X_length_Y_cov_Z_start_end)
-            subject_contig_name = row['Sequence_subject'].split('_')[0] + '_' + row['Sequence_subject'].split('_')[1] + '_' + row['Sequence_subject'].split('_')[2] + '_' + row['Sequence_subject'].split('_')[3] + '_' + row['Sequence_subject'].split('_')[4]
-            subject_element_id = f"{subject_contig_name}_{row['s_start']}_{row['s_end']}"
+            # Build robust element ID without relying on Sequence_* name format
+            subject_element_id = f"{subject_contig_id}_{row['s_start']}_{row['s_end']}"
             elements_info_rows.append({
                 'ID': subject_element_id,  # Renamed from HGT_ID to ID
                 'HGT_ID': hgt_event_id,  # New column for HGT event ID
@@ -651,7 +579,7 @@ def cmd_index(args):
     print(f"Simulated sequences index: {simi_sequences_index}")
     print(f"Contigs in HGT index: {len(involved_contigs)}")
     print(f"Elements info raw: {elements_info_raw}")
-    print(f"\nUse: HDMI validate [options] for each sample")
+    print(f"\nUse: HDMI profile [options] for each sample")
 
 
 # Removed cmd_test function as it's no longer needed

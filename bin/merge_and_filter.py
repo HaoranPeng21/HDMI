@@ -441,6 +441,12 @@ def main():
                 main_element_table = os.path.join(main_output_dir, 'element_table.csv')
                 shutil.copy2(element_table_file, main_element_table)
                 print(f"Element table also saved to main output: {main_element_table}")
+
+                # Copy filtered HGT events to main output directory (overwrite any pre-profile file)
+                main_hgt_events = os.path.join(main_output_dir, 'HGT_events.csv')
+                if os.path.exists(filtered_hgt_file):
+                    shutil.copy2(filtered_hgt_file, main_hgt_events)
+                    print(f"Filtered HGT events also saved to main output: {main_hgt_events}")
                 
                 # Create final elements_info.csv with element details
                 elements_info_raw_file = os.path.join(os.path.dirname(os.path.dirname(profile_dir)), 'index', 'elements_info_raw.csv')

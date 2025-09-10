@@ -50,7 +50,8 @@ def extract_and_simulate_sequences(elements_info_path, contigs_path, output_dir)
             sequences[contig_name] = original_seq_record
             added_contigs.add(contig_name)
 
-        simulated_seq = original_seq[:start] + original_seq[end:]
+        # Positions in inputs are 1-based inclusive; convert to 0-based half-open for slicing
+        simulated_seq = original_seq[:start-1] + original_seq[end:]
         simulated_id = f"{element_id}_sim"
         simulated_seq_record = SeqRecord(Seq(str(simulated_seq)), id=simulated_id, description="")
         sequences[simulated_id] = simulated_seq_record  # This allows for multiple simulated sequences per contig

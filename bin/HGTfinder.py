@@ -96,20 +96,22 @@ def run_subprocess_command_with_pipes(cmd):
 def combine_fasta_files(genome_path, combined_output_path, selected_genomes=None):
     """
     Combine FASTA files. If selected_genomes is provided, only combine those genomes.
+    Add MAG prefix to contig IDs to avoid cross-genome ID collisions and to
+    match downstream expectations (e.g., BAM reference names).
     """
     with open(combined_output_path, 'w') as combined:
         for root, _, files in os.walk(genome_path):
             for file in files:
                 if (file.endswith('.fa') or file.endswith('.fasta')) and file != os.path.basename(combined_output_path):
                     genome_name = os.path.splitext(file)[0]
-                    
+
                     # If selected_genomes is provided, only process selected genomes
-                    if selected_genomes is not None:
-                        if genome_name not in selected_genomes.values():
-                            continue
-                    
-                    with open(os.path.join(root, file), 'r') as f:
-                        combined.write(f.read())
+                    if selected_genomes is not None and genome_name not in selected_genomes.values():
+                        continue
+
+                    genome_file_path = os.path.join(root, file)
+                    for record in SeqIO.parse(genome_file_path, 'fasta'):
+                        combined.write(f">{genome_name}_{record.id}\n{str(record.seq)}\n")
 
 
 def generate_coverage_data(sample_id, read1, read2, output, combined_genome_index, threads, suffix=""):
