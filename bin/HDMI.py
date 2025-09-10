@@ -386,11 +386,13 @@ def cmd_index(args):
     # Extract unique contigs from HGT events
     involved_contigs = set()
     for _, row in hgt_df.iterrows():
-        # Add query contig
-        query_contig = f"{row['MAG 1'].replace('.fa', '')}_{row['query_congtig_id']}"
+        # Add query contig (avoid double prefix)
+        base1 = row['MAG 1'].replace('.fa', '')
+        query_contig = row['query_congtig_id'] if row['query_congtig_id'].startswith(base1 + '_') else f"{base1}_{row['query_congtig_id']}"
         involved_contigs.add(query_contig)
         # Add subject contig  
-        subject_contig = f"{row['MAG 2'].replace('.fa', '')}_{row['subject_contig_id']}"
+        base2 = row['MAG 2'].replace('.fa', '')
+        subject_contig = row['subject_contig_id'] if row['subject_contig_id'].startswith(base2 + '_') else f"{base2}_{row['subject_contig_id']}"
         involved_contigs.add(subject_contig)
     
     print(f"Found {len(involved_contigs)} unique contigs involved in HGT events")
@@ -528,7 +530,8 @@ def cmd_index(args):
             hgt_event_id = row['HGT_ID']
             
             # Query contig record
-            query_contig_id = f"{row['MAG 1'].replace('.fa', '')}_{row['query_congtig_id']}"
+            base1 = row['MAG 1'].replace('.fa', '')
+            query_contig_id = row['query_congtig_id'] if row['query_congtig_id'].startswith(base1 + '_') else f"{base1}_{row['query_congtig_id']}"
             # Build robust element ID without relying on Sequence_* name format
             query_element_id = f"{query_contig_id}_{row['q_start']}_{row['q_end']}"
             elements_info_rows.append({
@@ -541,7 +544,8 @@ def cmd_index(args):
             })
             
             # Subject contig record  
-            subject_contig_id = f"{row['MAG 2'].replace('.fa', '')}_{row['subject_contig_id']}"
+            base2 = row['MAG 2'].replace('.fa', '')
+            subject_contig_id = row['subject_contig_id'] if row['subject_contig_id'].startswith(base2 + '_') else f"{base2}_{row['subject_contig_id']}"
             # Build robust element ID without relying on Sequence_* name format
             subject_element_id = f"{subject_contig_id}_{row['s_start']}_{row['s_end']}"
             elements_info_rows.append({

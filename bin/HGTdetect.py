@@ -82,6 +82,8 @@ def blast_comparison(mag_pair, genome_path, fasta_dict, pair_index, total_pairs,
     output_match_fasta_q = {}
     output_fasta_s = {}
     output_match_fasta_s = {}
+    mag1_base = os.path.splitext(mag1)[0]
+    mag2_base = os.path.splitext(mag2)[0]
     log_filename = f"{log_path}/log/output.log_{task_number}"
     with open(log_filename, "a") as log_file:
         log_file.write(f"Task {task_number} - Processing pair {pair_index + 1}/{total_pairs}: {mag1} vs {mag2}\n")
@@ -116,11 +118,33 @@ def blast_comparison(mag_pair, genome_path, fasta_dict, pair_index, total_pairs,
             full_match = (length >= query_length*0.90) or (length >= subject_length*0.90)
 
 
-            output_table.add((f"{query_seq_id}_{q_start}_{q_end}", f"{subject_seq_id}_{s_start}_{s_end}" ,query_seq_id,subject_seq_id, mag1, mag2, q_start, q_end, s_start, s_end, query_length, subject_length, length, identity, end_match, full_match))
-            
-            output_fasta_q[query_seq_id] = query_record
+            # Build prefixed contig IDs
+            pref_q_id = f"{mag1_base}_{query_seq_id}"
+            pref_s_id = f"{mag2_base}_{subject_seq_id}"
 
-            output_fasta_s[subject_seq_id] = subject_record
+            # Write prefixed IDs into CSV fields
+            output_table.add((
+                f"{pref_q_id}_{q_start}_{q_end}",
+                f"{pref_s_id}_{s_start}_{s_end}",
+                pref_q_id,
+                pref_s_id,
+                mag1,
+                mag2,
+                q_start,
+                q_end,
+                s_start,
+                s_end,
+                query_length,
+                subject_length,
+                length,
+                identity,
+                end_match,
+                full_match
+            ))
+
+            # Store FASTA records with prefixed IDs
+            output_fasta_q[pref_q_id] = SeqRecord(Seq(str(query_record.seq)), id=pref_q_id, description="")
+            output_fasta_s[pref_s_id] = SeqRecord(Seq(str(subject_record.seq)), id=pref_s_id, description="")
 
             query_direction = q_end - q_start
             subject_direction = s_end - s_start
@@ -130,17 +154,17 @@ def blast_comparison(mag_pair, genome_path, fasta_dict, pair_index, total_pairs,
             else:
                 matched_seq_q = query_record.seq[q_end - 1:q_start]
 
-            matched_record_q = SeqRecord(Seq(str(matched_seq_q)), id=f"{query_seq_id}_{q_start}_{q_end}", description="Matched sequence")
+            matched_record_q = SeqRecord(Seq(str(matched_seq_q)), id=f"{pref_q_id}_{q_start}_{q_end}", description="Matched sequence")
             
             if subject_direction >0:
                 matched_seq_s = subject_record.seq[s_start - 1:s_end]
             else:
                 matched_seq_s = subject_record.seq[s_end - 1:s_start]
 
-            matched_record_s = SeqRecord(Seq(str(matched_seq_s)), id=f"{subject_seq_id}_{s_start}_{s_end}", description="Matched sequence")
+            matched_record_s = SeqRecord(Seq(str(matched_seq_s)), id=f"{pref_s_id}_{s_start}_{s_end}", description="Matched sequence")
 
-            output_match_fasta_q[query_seq_id + "_"+ str(q_start) + "_" + str(q_end)] = matched_record_q
-            output_match_fasta_s[subject_seq_id + "_" + str(s_start) + "_" + str(s_end)] = matched_record_s
+            output_match_fasta_q[f"{pref_q_id}_{q_start}_{q_end}"] = matched_record_q
+            output_match_fasta_s[f"{pref_s_id}_{s_start}_{s_end}"] = matched_record_s
 
     return output_table, output_fasta_q,output_fasta_s, output_match_fasta_q,output_match_fasta_s
 

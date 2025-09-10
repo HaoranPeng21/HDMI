@@ -455,9 +455,9 @@ def main():
                     # Filter to only include elements that have evidence in element_table
                     element_table_df = pd.read_csv(element_table_file, index_col=0)
                     filtered_elements = elements_info_df[elements_info_df['ID'].isin(element_table_df.index)]
-                    main_elements_info = os.path.join(main_output_dir, 'elements_info.csv')
+                    main_elements_info = os.path.join(main_output_dir, 'element_info.csv')
                     filtered_elements.to_csv(main_elements_info, index=False)
-                    print(f"Elements info also saved to main output: {main_elements_info}")
+                    print(f"Element info also saved to main output: {main_elements_info}")
                 else:
                     print("Warning: elements_info_raw.csv not found, skipping elements_info.csv creation")
             else:

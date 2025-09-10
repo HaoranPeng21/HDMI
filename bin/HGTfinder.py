@@ -237,8 +237,11 @@ def extract_HGT_coverage(table_file):
     df.set_index("HGT_ID", inplace=True)
     
     # Add MAG prefixes to contig IDs to match BAM file format
-    df['query_congtig_id_with_prefix'] = df['MAG 1'].str.replace('.fa', '', regex=False) + '_' + df['query_congtig_id']
-    df['subject_contig_id_with_prefix'] = df['MAG 2'].str.replace('.fa', '', regex=False) + '_' + df['subject_contig_id']
+    # Avoid double prefix if detect already wrote MAG-prefixed contig IDs
+    base1 = df['MAG 1'].str.replace('.fa', '', regex=False)
+    base2 = df['MAG 2'].str.replace('.fa', '', regex=False)
+    df['query_congtig_id_with_prefix'] = df.apply(lambda r: r['query_congtig_id'] if str(r['query_congtig_id']).startswith(str(r['MAG 1']).replace('.fa','') + '_') else str(r['MAG 1']).replace('.fa','') + '_' + str(r['query_congtig_id']), axis=1)
+    df['subject_contig_id_with_prefix'] = df.apply(lambda r: r['subject_contig_id'] if str(r['subject_contig_id']).startswith(str(r['MAG 2']).replace('.fa','') + '_') else str(r['MAG 2']).replace('.fa','') + '_' + str(r['subject_contig_id']), axis=1)
     
     df['details'] = df[['query_congtig_id_with_prefix', 'q_start', 'q_end', 'Length', 'MAG 1', "subject_contig_id_with_prefix", "s_start", "s_end", "MAG 2"]].values.tolist()
     HGT = dict(zip(df.index, df['details']))
