@@ -173,7 +173,7 @@ def calculate_custom_value(x, species_existence_status=None, coverage_fraction_s
         # nHI = nHI if nHI ≥ 2 else 0
         nHI = parts[2] if parts[2] >= 2 else 0
         
-        # If both HI and nHI are 0, return NA
+        # If both HI and nHI are 0, return NA (reads ratio not sufficient)
         if HI == 0 and nHI == 0:
             result = np.nan
         # HGT presence = HI / (HI + nHI) > 0
@@ -294,10 +294,10 @@ def run_me_strict_analysis(profile_dir, species_median_file, output_file, filter
             df = pd.read_csv(file, sep='\t', header=None, dtype=str)
             df.columns = ['HGT_ID'] + [f'{sample_name}']  # Use only sample_name, no duplication
             
-            # Filter to only include filtered HGT elements if provided
-            if filtered_hgt_ids:
-                df = df[df['HGT_ID'].isin(filtered_hgt_ids)]
-                print(f"Filtered to {len(df)} elements from {len(filtered_hgt_ids)} filtered HGT elements")
+            # Filter to only include elements that have mapping information
+            if element_to_hgt_mapping:
+                df = df[df['HGT_ID'].isin(element_to_hgt_mapping.keys())]
+                print(f"Filtered to {len(df)} elements from {len(element_to_hgt_mapping)} mapped elements")
             
             # Apply validation filters if available
             if species_existence_df is not None and coverage_fraction_df is not None and element_to_hgt_mapping:
