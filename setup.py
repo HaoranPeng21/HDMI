@@ -16,7 +16,7 @@ def get_version():
     return "1.0.0"
 
 setup(
-    name="HDMI",
+    name="hdmi",
     version=get_version(),
     author="Haoran Peng",
     author_email="penghr21@gmail.com",
@@ -37,7 +37,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     install_requires=[
         "pandas>=1.3.0",
         "numpy>=1.21.0",
@@ -47,6 +47,7 @@ setup(
     entry_points={
         "console_scripts": [
             "HDMI=bin.HDMI:main",
+            "hdmi=bin.HDMI:main",
         ],
     },
     include_package_data=True,

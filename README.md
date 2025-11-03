@@ -78,10 +78,18 @@ The pipeline is optimized for high-throughput analysis and provides comprehensiv
    conda activate HDMI
    ```
 
-3. **Install HDMI**:
+3. **Install HDMI (development install)**:
    ```bash
    pip install -e .
    ```
+
+### Install via Conda (after Bioconda merged)
+
+```bash
+conda install -c conda-forge -c bioconda hdmi
+# or
+mamba install -c conda-forge -c bioconda hdmi
+```
 
 4. **Verify installation**:
    ```bash
