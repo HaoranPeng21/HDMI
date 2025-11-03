@@ -8,7 +8,7 @@ package:
 source:
   url: https://github.com/HaoranPeng21/HDMI/archive/refs/tags/v{{ version }}.tar.gz
   # TODO: Update this when you create the GitHub release tag v{{ version }}
-  sha256: 0000000000000000000000000000000000000000000000000000000000000000
+  sha256: 730dacf8426237f769c802cecc3d385324894c50cfb90cba8ec42afbf494044f
 
 build:
   noarch: python
@@ -43,4 +43,3 @@ about:
 extra:
   recipe-maintainers:
     - HaoranPeng21
-
