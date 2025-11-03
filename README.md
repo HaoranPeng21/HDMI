@@ -83,7 +83,7 @@ The pipeline is optimized for high-throughput analysis and provides comprehensiv
    pip install -e .
    ```
 
-### Install via Conda (after Bioconda merged)
+### Install via Conda (pending...)
 
 ```bash
 conda install -c conda-forge -c bioconda hdmi
@@ -94,6 +94,10 @@ mamba install -c conda-forge -c bioconda hdmi
 4. **Verify installation**:
    ```bash
    HDMI --help
+   ```
+5. **Test Dataset installation**:
+   ```
+   https://zenodo.org/records/17515026
    ```
 
 ## 📖 Detailed Usage
